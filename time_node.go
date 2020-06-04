@@ -16,10 +16,17 @@ type Time struct {
 type timeNode struct {
 	expire   uint64
 	callback func()
+
+	list *Time
 }
 
 func (t *timeNode) Remove() {
+	t.list.Lock()
+	defer t.list.Unlock()
+	//t.list.Remove(t)
 }
 
+/*
 func (t *timeNode) Stop() {
 }
+*/

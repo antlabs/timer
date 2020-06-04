@@ -107,10 +107,51 @@ func (t *timer) Stop() {
 	t.cancel()
 }
 
+// 移动链表
+func (t *timer) cascade(levelIndex int, index int) {
+	tmp := list.New()
+	l := t.t2Tot5[levelIndex][index]
+
+	tmp.PushBack(l)
+	for e := tmp.Front(); e != nil; e = e.Next() {
+		// TODO
+		t.add()
+	}
+}
+
+// moveAndExec函数功能
+//1. 先移动到near链表里面
+//2. near链表节点为空时，从上一层里面移动一些节点到下一层
+//3. 再执行
 func (t *timer) moveAndExec() {
-	//1. 先移动到near链表里面
-	//2. 再执行
+
+	// 这里时间溢出
+	if uint32(t.jiffies) == 0 {
+		// TODO
+		return
+	}
+
+	//如果本层的盘子没有定时器，这时候和上层的盘子移动一些过来
+	index := t.jiffies & nearMask
+	if index == 0 {
+		for i := 0; i <= 3; i++ {
+			index = t.index(i)
+			if index != 0 {
+				t.cascade(i, int(index))
+				break
+			}
+		}
+	}
+
 	t.jiffies++
+
+	// 执行
+	var head *Time
+	head.PushBack(t.t1[index])
+	for e := head.Front(); e != nil; e = e.Next() {
+		val := e.Value.(*timeNode)
+		go val.callback()
+	}
 }
 
 func (t *timer) run() {
