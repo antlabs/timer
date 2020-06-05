@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -55,6 +56,10 @@ func (t *timer) init() {
 	t.curTimePoint = get10Ms()
 }
 
+func maxVal() uint64 {
+	return (1 << (nearShift + 4*levelShift)) - 1
+}
+
 func levelMax(index int) uint64 {
 	return 1 << (nearShift + index*levelShift)
 }
@@ -63,44 +68,47 @@ func (t *timer) index(n int) uint64 {
 	return (t.jiffies >> (nearShift + levelShift*n)) & levelMask
 }
 
-func (t *timer) add(expire time.Duration, callback func()) (node *Time) {
-	//idx := expire - t.current
-	idx := expire / (time.Millisecond * 10)
-	expire = idx
-
-	var currLevel int //debug
-	var index int64
-
-	defer func() {
-		fmt.Printf("node:%p:::index:%d, currLevel:%d, idx:%d\n", node, index, currLevel, idx)
-	}()
+func (t *timer) add(node *timeNode) *timeNode {
+	var head *Time
+	expire := node.expire
+	idx := expire - t.jiffies
 
 	if idx < nearSize {
+
 		i := uint64(expire) & nearMask
-		node = t.t1[i]
-		currLevel = 1
-		return node
-	}
+		head = t.t1[i]
 
-	// 假如idx < 0
-	// TODO
+	} else {
 
-	// TODO 时间溢出
+		max := maxVal()
+		for i := 0; i <= 3; i++ {
 
-	for i := 0; i <= 3; i++ {
-		if uint64(idx) < levelMax(i+1) {
-			index = int64(expire) >> (nearShift + i*levelMask) & levelMask
-			node = t.t2Tot5[i][index]
-			currLevel = i
-			break
+			if idx > max {
+				idx = max
+				expire = idx + t.jiffies
+			}
+
+			if uint64(idx) < levelMax(i+1) {
+				index := int64(expire) >> (nearShift + i*levelMask) & levelMask
+				head = t.t2Tot5[i][index]
+				break
+			}
 		}
+		fmt.Printf("idx:%di:%p\n", idx, head)
 	}
 
+	if head == nil {
+		panic("not found head")
+	}
+
+	head.PushBack(node)
 	return node
 }
 
-func (t *timer) AfterFunc(expire time.Duration, callback func()) *Time {
-	return t.add(expire, callback)
+func (t *timer) AfterFunc(expire time.Duration, callback func()) *timeNode {
+	expire = expire/(time.Millisecond*10) + time.Duration(t.jiffies)
+	node := &timeNode{expire: uint64(expire), callback: callback}
+	return t.add(node)
 }
 
 func (t *timer) Stop() {
@@ -112,10 +120,11 @@ func (t *timer) cascade(levelIndex int, index int) {
 	tmp := list.New()
 	l := t.t2Tot5[levelIndex][index]
 
-	tmp.PushBack(l)
+	tmp.PushBackList(l.List)
+	t.t2Tot5[levelIndex][index].List.Init()
+
 	for e := tmp.Front(); e != nil; e = e.Next() {
-		// TODO
-		t.add()
+		t.add(e.Value.(*timeNode))
 	}
 }
 
@@ -128,7 +137,7 @@ func (t *timer) moveAndExec() {
 	// 这里时间溢出
 	if uint32(t.jiffies) == 0 {
 		// TODO
-		return
+		// return
 	}
 
 	//如果本层的盘子没有定时器，这时候和上层的盘子移动一些过来
@@ -146,10 +155,15 @@ func (t *timer) moveAndExec() {
 	t.jiffies++
 
 	// 执行
-	var head *Time
-	head.PushBack(t.t1[index])
+	head := Time{List: list.New()}
+
+	head.PushBackList(t.t1[index].List)
+	t.t1[index].List.Init()
+
 	for e := head.Front(); e != nil; e = e.Next() {
 		val := e.Value.(*timeNode)
+		head.List.Remove(e)
+
 		go val.callback()
 	}
 }
@@ -180,8 +194,10 @@ func (t *timer) run() {
 
 func (t *timer) Run() {
 	// 10ms精度
-	tk := time.NewTimer(time.Millisecond * 10)
+	tk := time.NewTicker(time.Millisecond * 10)
+	defer tk.Stop()
 
+	log.SetFlags(log.Lmicroseconds)
 	for {
 		select {
 		case <-tk.C:
