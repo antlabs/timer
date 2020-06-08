@@ -3,6 +3,7 @@ package timer
 import (
 	"container/list"
 	"sync"
+	"time"
 )
 
 // 先使用sync.Mutex实现功能
@@ -14,19 +15,17 @@ type Time struct {
 }
 
 type timeNode struct {
-	expire   uint64
-	callback func()
+	expire     uint64
+	userExpire time.Duration
+	callback   func()
+	isSchedule bool
 
-	list *Time
+	list    *Time
+	element *list.Element
 }
 
-func (t *timeNode) Remove() {
+func (t *timeNode) Stop() {
 	t.list.Lock()
 	defer t.list.Unlock()
-	//t.list.Remove(t)
+	t.list.Remove(t.element)
 }
-
-/*
-func (t *timeNode) Stop() {
-}
-*/

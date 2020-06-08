@@ -6,7 +6,17 @@ import (
 	"time"
 )
 
-func TestHelloWorld(t *testing.T) {
+func Test_ScheduleFunc(t *testing.T) {
+	tm := NewTimer()
+
+	tm.ScheduleFunc(1*time.Second, func() {
+		log.Printf("schedule\n")
+	})
+
+	tm.Run()
+}
+
+func Test_AfterFunc(t *testing.T) {
 	tm := NewTimer()
 
 	log.Printf("start\n")
@@ -34,5 +44,4 @@ func TestHelloWorld(t *testing.T) {
 		tm.Stop()
 	}()
 	tm.Run()
-	//tm.debug()
 }
