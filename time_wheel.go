@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -84,6 +85,7 @@ func (t *timeWheel) index(n int) uint64 {
 func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 
 	var head *Time
+	var mutex *sync.Mutex
 	expire := node.expire
 	idx := expire - jiffies
 
@@ -91,6 +93,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 
 		i := uint64(expire) & nearMask
 		head = t.t1[i]
+		mutex = &t.t1[i].Mutex
 
 	} else {
 
@@ -105,6 +108,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 			if uint64(idx) < levelMax(i+1) {
 				index := int64(expire) >> (nearShift + i*levelMask) & levelMask
 				head = t.t2Tot5[i][index]
+				mutex = &t.t1[i].Mutex
 				break
 			}
 		}
@@ -115,7 +119,10 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 		panic("not found head")
 	}
 
+	mutex.Lock()
 	node.element = head.PushBack(node)
+	node.list = head
+	mutex.Unlock()
 
 	return node
 }
@@ -164,14 +171,41 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 	tmp := list.New()
 
 	l := t.t2Tot5[levelIndex][index]
+	l.Lock()
 
-	tmp.PushBackList(l.List)
+	for e := l.Front(); e != nil; {
+		next := e.Next()
+		l.Remove(e)
+
+		tmp.PushBack(e.Value)
+
+		e = next
+	}
 
 	t.t2Tot5[levelIndex][index].Init()
+
+	l.Unlock()
 
 	for e := tmp.Front(); e != nil; e = e.Next() {
 		t.add(e.Value.(*timeNode), atomic.LoadUint64(&t.jiffies))
 	}
+}
+
+func (t *timeWheel) moveTot1(head *Time, index uint64) {
+
+	t1 := t.t1[index]
+	t1.Lock()
+	defer t1.Unlock()
+
+	for e := t1.Front(); e != nil; {
+		next := e.Next()
+
+		t1.Remove(e)
+		head.PushBack(e.Value)
+		e = next
+	}
+
+	t.t1[index].List.Init()
 }
 
 // moveAndExec函数功能
@@ -205,11 +239,9 @@ func (t *timeWheel) moveAndExec() {
 		return
 	}
 
-	// 执行
 	head := Time{List: list.New()}
-
-	head.PushBackList(t.t1[index].List)
-	t.t1[index].List.Init()
+	t.moveTot1(&head, index)
+	// 执行
 
 	for e := head.Front(); e != nil; {
 
