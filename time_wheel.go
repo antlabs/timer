@@ -201,16 +201,22 @@ func (t *timeWheel) moveAndExec() {
 	// t.jiffies 只在run go程里面修改，所以不需要加atomic函数原子取
 	t.jiffies++
 
+	if t.t1[index].List.Len() == 0 {
+		return
+	}
+
 	// 执行
 	head := Time{List: list.New()}
 
 	head.PushBackList(t.t1[index].List)
 	t.t1[index].List.Init()
 
-	for e := head.Front(); e != nil; e = e.Next() {
+	for e := head.Front(); e != nil; {
 
 		val := e.Value.(*timeNode)
-		head.List.Remove(e)
+		next := e.Next()
+		head.Remove(e)
+		e = next
 
 		go val.callback()
 
