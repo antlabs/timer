@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"context"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -85,7 +84,6 @@ func (t *timeWheel) index(n int) uint64 {
 func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 
 	var head *Time
-	var mutex *sync.Mutex
 	expire := node.expire
 	idx := expire - jiffies
 
@@ -93,7 +91,6 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 
 		i := uint64(expire) & nearMask
 		head = t.t1[i]
-		mutex = &t.t1[i].Mutex
 
 	} else {
 
@@ -108,7 +105,6 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 			if uint64(idx) < levelMax(i+1) {
 				index := int64(expire) >> (nearShift + i*levelMask) & levelMask
 				head = t.t2Tot5[i][index]
-				mutex = &t.t1[i].Mutex
 				break
 			}
 		}
@@ -119,10 +115,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 		panic("not found head")
 	}
 
-	mutex.Lock()
-	node.element = head.PushBack(node)
-	node.list = head
-	mutex.Unlock()
+	head.lockPushBack(node)
 
 	return node
 }
@@ -233,11 +226,14 @@ func (t *timeWheel) moveAndExec() {
 	}
 
 	// t.jiffies 只在run go程里面修改，所以不需要加atomic函数原子取
-	t.jiffies++
+	atomic.AddUint64(&t.jiffies, 1)
 
+	t.t1[index].Lock()
 	if t.t1[index].List.Len() == 0 {
+		t.t1[index].Unlock()
 		return
 	}
+	t.t1[index].Unlock()
 
 	head := Time{List: list.New()}
 	t.moveTot1(&head, index)
