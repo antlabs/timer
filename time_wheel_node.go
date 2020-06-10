@@ -58,7 +58,7 @@ func (t *timeNode) grab() {
 func (t *timeNode) Stop() {
 	t.list.Lock()
 	defer t.list.Unlock()
-	atomic.StoreUint32(&t.close, 1)
+	atomic.StoreUint32(&t.close, haveStop)
 
 	//t.grab()
 
