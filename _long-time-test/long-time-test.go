@@ -53,6 +53,7 @@ func after(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 60*24; i++ {
+			i := i
 			tm.AfterFunc(time.Minute, func() {
 				log.Printf("after minute:%d\n", i)
 			})
@@ -63,6 +64,7 @@ func after(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 24; i++ {
+			i := i
 			tm.AfterFunc(time.Hour, func() {
 				log.Printf("after hour:%d\n", i)
 			})
@@ -73,6 +75,7 @@ func after(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1; i++ {
+			i := i
 			tm.AfterFunc(24*time.Hour, func() {
 				log.Printf("after day:%d\n", i)
 			})
@@ -91,6 +94,7 @@ func stopNode(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 3600*24; i++ {
+			i := i
 			node := tm.AfterFunc(time.Second, func() {
 				log.Printf("stop after second:%d\n", i)
 			})
@@ -102,6 +106,7 @@ func stopNode(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 60*24; i++ {
+			i := i
 			node := tm.AfterFunc(time.Minute, func() {
 				log.Printf("stop after minute:%d\n", i)
 			})
@@ -113,6 +118,7 @@ func stopNode(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 24; i++ {
+			i := i
 			node := tm.AfterFunc(time.Hour, func() {
 				log.Printf("stop after hour:%d\n", i)
 			})
@@ -124,6 +130,7 @@ func stopNode(tm timer.Timer) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 1; i++ {
+			i := i
 			node := tm.AfterFunc(23*time.Hour, func() {
 				log.Printf("stop after day:%d\n", i)
 			})
