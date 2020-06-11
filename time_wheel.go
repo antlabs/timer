@@ -89,8 +89,8 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 
 	if idx < nearSize {
 
-		i := uint64(expire) & nearMask
-		head = t.t1[i]
+		index := uint64(expire) & nearMask
+		head = t.t1[index]
 
 	} else {
 
@@ -217,9 +217,9 @@ func (t *timeWheel) moveAndExec() {
 	index := t.jiffies & nearMask
 	if index == 0 {
 		for i := 0; i <= 3; i++ {
-			index = t.index(i)
-			if index != 0 {
-				t.cascade(i, int(index))
+			index2 := t.index(i)
+			if index2 != 0 {
+				t.cascade(i, int(index2))
 				break
 			}
 		}
