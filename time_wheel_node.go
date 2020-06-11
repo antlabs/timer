@@ -56,8 +56,11 @@ func (t *timeNode) grab() {
 */
 
 func (t *timeNode) Stop() {
-	t.list.Lock()
-	defer t.list.Unlock()
+	//这里和32行是竞争关系，拷贝一个副本，防止出现unlock unlock的情况
+	cpyList := t.list
+	cpyList.Lock()
+	defer cpyList.Unlock()
+
 	atomic.StoreUint32(&t.close, haveStop)
 
 	//t.grab()
