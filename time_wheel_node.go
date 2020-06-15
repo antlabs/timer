@@ -1,10 +1,11 @@
 package timer
 
 import (
-	"container/list"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/antlabs/stl/list"
 )
 
 const (
@@ -16,9 +17,14 @@ const (
 // 先使用sync.Mutex实现功能
 // 后面使用cas优化
 type Time struct {
-	*list.List
-
+	timeNode
 	sync.Mutex
+}
+
+func newTimeHead() *Time {
+	head := &Time{}
+	head.Init()
+	return head
 }
 
 func (t *Time) lockPushBack(node *timeNode) {
@@ -28,7 +34,7 @@ func (t *Time) lockPushBack(node *timeNode) {
 		return
 	}
 
-	node.element = t.PushBack(node)
+	t.AddTail(&node.Head)
 	node.list = t
 }
 
@@ -40,20 +46,10 @@ type timeNode struct {
 	close      uint32
 	lock       uint32
 
-	list    *Time
-	element *list.Element
-}
+	list *Time
 
-/*
-func (t *timeNode) grab() {
-	for {
-		prevVal := atomic.LoadUint32(&t.lock)
-		if atomic.CompareAndSwapUint32(&t.lock, prevVal, stopGrab) {
-			break
-		}
-	}
+	list.Head
 }
-*/
 
 func (t *timeNode) Stop() {
 	//这里和32行是竞争关系，拷贝一个副本，防止出现unlock unlock的情况
@@ -63,7 +59,5 @@ func (t *timeNode) Stop() {
 
 	atomic.StoreUint32(&t.close, haveStop)
 
-	//t.grab()
-
-	t.list.Remove(t.element)
+	t.list.Del(&t.Head)
 }

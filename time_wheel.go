@@ -1,11 +1,13 @@
 package timer
 
 import (
-	"container/list"
 	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
+	"unsafe"
+
+	"github.com/antlabs/stl/list"
 )
 
 const (
@@ -57,12 +59,13 @@ func newTimeWheel() *timeWheel {
 func (t *timeWheel) init() {
 
 	for i := 0; i < nearSize; i++ {
-		t.t1[i] = &Time{List: list.New()}
+		t.t1[i] = newTimeHead()
+
 	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < levelSize; j++ {
-			t.t2Tot5[i][j] = &Time{List: list.New()}
+			t.t2Tot5[i][j] = newTimeHead()
 		}
 	}
 
@@ -161,27 +164,21 @@ func (t *timeWheel) Stop() {
 // 移动链表
 func (t *timeWheel) cascade(levelIndex int, index int) {
 
-	tmp := list.New()
+	tmp := newTimeHead()
 
 	l := t.t2Tot5[levelIndex][index]
 	l.Lock()
 
-	for e := l.Front(); e != nil; {
-		next := e.Next()
-		l.Remove(e)
-
-		tmp.PushBack(e.Value)
-
-		e = next
-	}
-
-	t.t2Tot5[levelIndex][index].Init()
+	l.ReplaceInit(&tmp.Head)
 
 	l.Unlock()
 
-	for e := tmp.Front(); e != nil; e = e.Next() {
-		t.add(e.Value.(*timeNode), atomic.LoadUint64(&t.jiffies))
-	}
+	offset := unsafe.Offsetof(tmp.Head)
+	tmp.ForEachSafe(func(pos *list.Head) {
+		node := (*timeNode)(pos.Entry(offset))
+		t.add(node, atomic.LoadUint64(&t.jiffies))
+	})
+
 }
 
 func (t *timeWheel) moveTot1(head *Time, index uint64) {
@@ -190,15 +187,7 @@ func (t *timeWheel) moveTot1(head *Time, index uint64) {
 	t1.Lock()
 	defer t1.Unlock()
 
-	for e := t1.Front(); e != nil; {
-		next := e.Next()
-
-		t1.Remove(e)
-		head.PushBack(e.Value)
-		e = next
-	}
-
-	t.t1[index].List.Init()
+	t1.ReplaceInit(&head.Head)
 }
 
 // moveAndExec函数功能
@@ -229,23 +218,22 @@ func (t *timeWheel) moveAndExec() {
 	atomic.AddUint64(&t.jiffies, 1)
 
 	t.t1[index].Lock()
-	if t.t1[index].List.Len() == 0 {
+	if t.t1[index].Len() == 0 {
 		t.t1[index].Unlock()
 		return
 	}
+
 	t.t1[index].Unlock()
 
-	head := Time{List: list.New()}
-	t.moveTot1(&head, index)
+	head := newTimeHead()
+	t.moveTot1(head, index)
 	// 执行
 
-	for e := head.Front(); e != nil; {
+	offset := unsafe.Offsetof(head.Head)
 
-		val := e.Value.(*timeNode)
-		next := e.Next()
-		head.Remove(e)
-		e = next
-
+	head.ForEachSafe(func(pos *list.Head) {
+		val := (*timeNode)(pos.Entry(offset))
+		head.Del(pos)
 		go val.callback()
 
 		if val.isSchedule {
@@ -253,7 +241,8 @@ func (t *timeWheel) moveAndExec() {
 			val.expire = uint64(t.getExpire(val.userExpire, jiffies))
 			t.add(val, jiffies)
 		}
-	}
+	})
+
 }
 
 func (t *timeWheel) run() {
