@@ -73,3 +73,23 @@ func main() {
 	tm.Run()
 }
 ```
+## benchmark
+github.com/antlabs/timer 性能最高
+```
+goos: linux
+goarch: amd64
+pkg: benchmark
+Benchmark_antlabs_Timer_AddTimer/N-1m-16        	 9177537	       124 ns/op
+Benchmark_antlabs_Timer_AddTimer/N-5m-16        	10152950	       128 ns/op
+Benchmark_antlabs_Timer_AddTimer/N-10m-16       	 9955639	       127 ns/op
+Benchmark_RussellLuo_Timingwheel_AddTimer/N-1m-16         	 5316916	       222 ns/op
+Benchmark_RussellLuo_Timingwheel_AddTimer/N-5m-16         	 5848843	       218 ns/op
+Benchmark_RussellLuo_Timingwheel_AddTimer/N-10m-16        	 5872621	       231 ns/op
+Benchmark_ouqiang_Timewheel/N-1m-16                       	  720667	      1622 ns/op
+Benchmark_ouqiang_Timewheel/N-5m-16                       	  807018	      1573 ns/op
+Benchmark_ouqiang_Timewheel/N-10m-16                      	  666183	      1557 ns/op
+Benchmark_Stdlib_AddTimer/N-1m-16                         	 8031864	       144 ns/op
+Benchmark_Stdlib_AddTimer/N-5m-16                         	 8437442	       151 ns/op
+Benchmark_Stdlib_AddTimer/N-10m-16                        	 8080659	       167 ns/op
+
+```
