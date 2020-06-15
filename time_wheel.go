@@ -106,7 +106,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 			}
 
 			if uint64(idx) < levelMax(i+1) {
-				index := int64(expire) >> (nearShift + i*levelMask) & levelMask
+				index := int64(expire) >> (nearShift + i*levelShift) & levelMask
 				head = t.t2Tot5[i][index]
 				break
 			}
@@ -137,7 +137,7 @@ func (t *timeWheel) AfterFunc(expire time.Duration, callback func()) TimeNoder {
 	return t.add(node, jiffies)
 }
 
-func (t *timeWheel) getExpire(expire time.Duration, jiffies uint64) time.Duration {
+func getExpire(expire time.Duration, jiffies uint64) time.Duration {
 	return expire/(time.Millisecond*10) + time.Duration(jiffies)
 }
 
@@ -145,7 +145,7 @@ func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func()) Time
 
 	jiffies := atomic.LoadUint64(&t.jiffies)
 
-	expire := t.getExpire(userExpire, jiffies)
+	expire := getExpire(userExpire, jiffies)
 
 	node := &timeNode{
 		userExpire: userExpire,
@@ -168,6 +168,10 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 
 	l := t.t2Tot5[levelIndex][index]
 	l.Lock()
+	if l.Len() == 0 {
+		l.Unlock()
+		return
+	}
 
 	l.ReplaceInit(&tmp.Head)
 
@@ -179,15 +183,6 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 		t.add(node, atomic.LoadUint64(&t.jiffies))
 	})
 
-}
-
-func (t *timeWheel) moveTot1(head *Time, index uint64) {
-
-	t1 := t.t1[index]
-	t1.Lock()
-	defer t1.Unlock()
-
-	t1.ReplaceInit(&head.Head)
 }
 
 // moveAndExec函数功能
@@ -223,10 +218,12 @@ func (t *timeWheel) moveAndExec() {
 		return
 	}
 
+	head := newTimeHead()
+	t1 := t.t1[index]
+	t1.ReplaceInit(&head.Head)
+
 	t.t1[index].Unlock()
 
-	head := newTimeHead()
-	t.moveTot1(head, index)
 	// 执行
 
 	offset := unsafe.Offsetof(head.Head)
@@ -238,14 +235,15 @@ func (t *timeWheel) moveAndExec() {
 
 		if val.isSchedule {
 			jiffies := t.jiffies
-			val.expire = uint64(t.getExpire(val.userExpire, jiffies))
+			val.expire = uint64(getExpire(val.userExpire, jiffies))
 			t.add(val, jiffies)
 		}
 	})
 
 }
 
-func (t *timeWheel) run() {
+// get10Ms函数通过参数传递，为了方便测试
+func (t *timeWheel) run(get10Ms func() time.Duration) {
 	// 先判断是否需要更新
 	// 内核里面实现使用了全局jiffies和本地的jiffies比较,应用层没有jiffies，直接使用时间比较
 	// 这也是skynet里面的做法
@@ -279,7 +277,7 @@ func (t *timeWheel) Run() {
 	for {
 		select {
 		case <-tk.C:
-			t.run()
+			t.run(get10Ms)
 		case <-t.ctx.Done():
 			return
 		}
