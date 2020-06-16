@@ -52,7 +52,11 @@ type timeNode struct {
 }
 
 func (t *timeNode) Stop() {
-	//这里和32行是竞争关系，拷贝一个副本，防止出现unlock unlock的情况
+	//这里为什么修改成cpyList := t.list
+	//如果直接使用t.list.Lock()和t.list.Unlock()就会和lockPushBack函数里的node.list = t 是竞争关系
+	//lockPushBack拿到锁，修改国t.list的值。这时候Stop函数里面的t.list.Lock()持有旧链表里的锁。t.list.unlock新链表里的锁，发触发unlock unlock情况。
+	
+	//TODO：思考有没有新的竞争关系。。。
 	cpyList := t.list
 	cpyList.Lock()
 	defer cpyList.Unlock()
