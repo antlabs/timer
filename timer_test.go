@@ -28,7 +28,7 @@ func Test_ScheduleFunc(t *testing.T) {
 	}()
 
 	tm.Run()
-	assert.Equal(t, count, uint32(5))
+	assert.Equal(t, atomic.LoadUint32(&count), uint32(5))
 }
 
 func Test_AfterFunc(t *testing.T) {
@@ -64,7 +64,23 @@ func Test_AfterFunc(t *testing.T) {
 		tm.Stop()
 	}()
 	tm.Run()
-	assert.Equal(t, count, uint32(2))
+	assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
+}
+
+func Test_Node_Stop_1(t *testing.T) {
+	tm := NewTimer()
+	count := uint32(0)
+	node := tm.AfterFunc(time.Millisecond*10, func() {
+		atomic.AddUint32(&count, 1)
+	})
+	go func() {
+		time.Sleep(time.Millisecond * 30)
+		node.Stop()
+		tm.Stop()
+	}()
+
+	tm.Run()
+	assert.NotEqual(t, count, 1)
 }
 
 func Test_Node_Stop(t *testing.T) {

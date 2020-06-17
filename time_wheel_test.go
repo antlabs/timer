@@ -19,6 +19,11 @@ func Test_LevelMax(t *testing.T) {
 	assert.Equal(t, levelMax(4), uint64(1<<(nearShift+4*levelShift)))
 }
 
+func Test_GenVersion(t *testing.T) {
+	assert.Equal(t, genVersionHeight(1, 0xf), uint64(0x0001000f00000000))
+	assert.Equal(t, genVersionHeight(1, 64), uint64(0x0001004000000000))
+}
+
 func Test_hour(t *testing.T) {
 	tw := newTimeWheel()
 

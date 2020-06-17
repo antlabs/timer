@@ -59,13 +59,13 @@ func newTimeWheel() *timeWheel {
 func (t *timeWheel) init() {
 
 	for i := 0; i < nearSize; i++ {
-		t.t1[i] = newTimeHead()
+		t.t1[i] = newTimeHead(1, uint64(i))
 
 	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < levelSize; j++ {
-			t.t2Tot5[i][j] = newTimeHead()
+			t.t2Tot5[i][j] = newTimeHead(uint64(i+2), uint64(j))
 		}
 	}
 
@@ -90,9 +90,11 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 	expire := node.expire
 	idx := expire - jiffies
 
+	level, index := uint64(1), uint64(0)
+
 	if idx < nearSize {
 
-		index := uint64(expire) & nearMask
+		index = uint64(expire) & nearMask
 		head = t.t1[index]
 
 	} else {
@@ -106,8 +108,9 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 			}
 
 			if uint64(idx) < levelMax(i+1) {
-				index := int64(expire) >> (nearShift + i*levelShift) & levelMask
+				index = uint64(expire >> (nearShift + i*levelShift) & levelMask)
 				head = t.t2Tot5[i][index]
+				level = uint64(i) + 2
 				break
 			}
 		}
@@ -118,7 +121,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 		panic("not found head")
 	}
 
-	head.lockPushBack(node)
+	head.lockPushBack(node, level, index)
 
 	return node
 }
@@ -164,7 +167,7 @@ func (t *timeWheel) Stop() {
 // 移动链表
 func (t *timeWheel) cascade(levelIndex int, index int) {
 
-	tmp := newTimeHead()
+	tmp := newTimeHead(0, 0)
 
 	l := t.t2Tot5[levelIndex][index]
 	l.Lock()
@@ -175,6 +178,8 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 
 	l.ReplaceInit(&tmp.Head)
 
+	// 每次链表的元素被移动走，都修改version
+	atomic.AddUint64(&l.version, 1)
 	l.Unlock()
 
 	offset := unsafe.Offsetof(tmp.Head)
@@ -218,10 +223,10 @@ func (t *timeWheel) moveAndExec() {
 		return
 	}
 
-	head := newTimeHead()
+	head := newTimeHead(0, 0)
 	t1 := t.t1[index]
 	t1.ReplaceInit(&head.Head)
-
+	atomic.AddUint64(&t1.version, 1)
 	t.t1[index].Unlock()
 
 	// 执行
@@ -231,6 +236,11 @@ func (t *timeWheel) moveAndExec() {
 	head.ForEachSafe(func(pos *list.Head) {
 		val := (*timeNode)(pos.Entry(offset))
 		head.Del(pos)
+
+		if atomic.LoadUint32(&val.stop) == haveStop {
+			return
+		}
+
 		go val.callback()
 
 		if val.isSchedule {
