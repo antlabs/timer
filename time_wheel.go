@@ -213,8 +213,7 @@ func (t *timeWheel) moveAndExec() {
 			}
 		}
 	}
-
-	// t.jiffies 只在run go程里面修改，所以不需要加atomic函数原子取
+	
 	atomic.AddUint64(&t.jiffies, 1)
 
 	t.t1[index].Lock()
