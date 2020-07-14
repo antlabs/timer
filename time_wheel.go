@@ -114,7 +114,6 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 				break
 			}
 		}
-		//fmt.Printf("idx:%d i:%p\n", idx, head)
 	}
 
 	if head == nil {
@@ -202,18 +201,18 @@ func (t *timeWheel) moveAndExec() {
 		// return
 	}
 
-	//如果本层的盘子没有定时器，这时候和上层的盘子移动一些过来
+	//如果本层的盘子没有定时器，这时候从上层的盘子移动一些过来
 	index := t.jiffies & nearMask
 	if index == 0 {
 		for i := 0; i <= 3; i++ {
 			index2 := t.index(i)
+			t.cascade(i, int(index2))
 			if index2 != 0 {
-				t.cascade(i, int(index2))
 				break
 			}
 		}
 	}
-	
+
 	atomic.AddUint64(&t.jiffies, 1)
 
 	t.t1[index].Lock()
@@ -228,8 +227,7 @@ func (t *timeWheel) moveAndExec() {
 	atomic.AddUint64(&t1.version, 1)
 	t.t1[index].Unlock()
 
-	// 执行
-
+	// 执行,链表中的定时器
 	offset := unsafe.Offsetof(head.Head)
 
 	head.ForEachSafe(func(pos *list.Head) {
@@ -244,7 +242,10 @@ func (t *timeWheel) moveAndExec() {
 
 		if val.isSchedule {
 			jiffies := t.jiffies
-			val.expire = uint64(getExpire(val.userExpire, jiffies))
+			// 这里的jiffies必须要减去1
+			// 当前的callback被调用，已经包含一个时间片,如果不把这个时间片减去，
+			// 每次多一个时间片，就变成累加器, 最后周期定时器慢慢会变得不准
+			val.expire = uint64(getExpire(val.userExpire, jiffies-1))
 			t.add(val, jiffies)
 		}
 	})
