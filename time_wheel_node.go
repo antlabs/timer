@@ -54,7 +54,8 @@ func (t *Time) lockPushBack(node *timeNode, level uint64, index uint64) {
 type timeNode struct {
 	expire     uint64
 	userExpire time.Duration
-	callback   func()
+	callback   func(args ...interface{})
+	args       []interface{}
 	stop       uint32
 	list       unsafe.Pointer //存放表头信息
 	version    uint64         //保存节点版本信息

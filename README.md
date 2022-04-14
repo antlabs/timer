@@ -17,11 +17,11 @@ import (
 func main() {
         tm := timer.NewTimer()
 
-        tm.AfterFunc(1*time.Second, func() {
+        tm.AfterFunc(1*time.Second, func(args ...interface{}) {
                 log.Printf("after\n")
         })
 
-        tm.AfterFunc(10*time.Second, func() {
+        tm.AfterFunc(10*time.Second, func(args ...interface{}) {
                 log.Printf("after\n")
         })
         tm.Run()
@@ -37,7 +37,7 @@ import (
 func main() {
         tm := timer.NewTimer()
 
-        tm.ScheduleFunc(1*time.Second, func() {
+        tm.ScheduleFunc(1*time.Second, func(args ...interface{}) {
                 log.Printf("schedule\n")
         })
 
@@ -59,12 +59,12 @@ func main() {
 	tm := timer.NewTimer()
 
 	// 只会打印2 time.Second
-	tm.AfterFunc(2*time.Second, func() {
+	tm.AfterFunc(2*time.Second, func(args ...interface{}) {
 		log.Printf("2 time.Second")
 	})
 
 	// tk3 会被 tk3.Stop()函数调用取消掉
-	tk3 := tm.AfterFunc(3*time.Second, func() {
+	tk3 := tm.AfterFunc(3*time.Second, func(args ...interface{}) {
 		log.Printf("3 time.Second")
 	})
 

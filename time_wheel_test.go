@@ -32,7 +32,7 @@ func Test_hour(t *testing.T) {
 
 	testHour := new(bool)
 	done := make(chan struct{}, 1)
-	tw.AfterFunc(time.Hour, func() {
+	tw.AfterFunc(time.Hour, func(args ...interface{}) {
 		*testHour = true
 		done <- struct{}{}
 	})
@@ -63,7 +63,7 @@ func Test_ScheduleFunc_5s(t *testing.T) {
 
 	testTime := time.Second * 5
 
-	tw.ScheduleFunc(testTime, func() {
+	tw.ScheduleFunc(testTime, func(args ...interface{}) {
 		atomic.AddInt32(&first5, 1)
 		if atomic.LoadInt32(&first5) == total {
 			cancel()
@@ -98,7 +98,7 @@ func Test_ScheduleFunc_hour(t *testing.T) {
 	const total = int32(100)
 	testTime := time.Hour
 
-	tw.ScheduleFunc(testTime, func() {
+	tw.ScheduleFunc(testTime, func(args ...interface{}) {
 		atomic.AddInt32(&first5, 1)
 		if atomic.LoadInt32(&first5) == total {
 			cancel()
@@ -133,7 +133,7 @@ func Test_ScheduleFunc_day(t *testing.T) {
 	const total = int32(10)
 	testTime := time.Hour * 24
 
-	tw.ScheduleFunc(testTime, func() {
+	tw.ScheduleFunc(testTime, func(args ...interface{}) {
 		atomic.AddInt32(&first5, 1)
 		if atomic.LoadInt32(&first5) == total {
 			cancel()

@@ -125,7 +125,7 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 	return node
 }
 
-func (t *timeWheel) AfterFunc(expire time.Duration, callback func()) TimeNoder {
+func (t *timeWheel) AfterFunc(expire time.Duration, callback func(args ...interface{}), args ...interface{}) TimeNoder {
 
 	jiffies := atomic.LoadUint64(&t.jiffies)
 
@@ -134,6 +134,7 @@ func (t *timeWheel) AfterFunc(expire time.Duration, callback func()) TimeNoder {
 	node := &timeNode{
 		expire:   uint64(expire),
 		callback: callback,
+		args:     args,
 	}
 
 	return t.add(node, jiffies)
@@ -143,7 +144,7 @@ func getExpire(expire time.Duration, jiffies uint64) time.Duration {
 	return expire/(time.Millisecond*10) + time.Duration(jiffies)
 }
 
-func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func()) TimeNoder {
+func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func(args ...interface{}), args ...interface{}) TimeNoder {
 
 	jiffies := atomic.LoadUint64(&t.jiffies)
 
@@ -153,6 +154,7 @@ func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func()) Time
 		userExpire: userExpire,
 		expire:     uint64(expire),
 		callback:   callback,
+		args:       args,
 		isSchedule: true,
 	}
 
@@ -238,7 +240,7 @@ func (t *timeWheel) moveAndExec() {
 			return
 		}
 
-		go val.callback()
+		go val.callback(val.args...)
 
 		if val.isSchedule {
 			jiffies := t.jiffies

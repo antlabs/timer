@@ -16,10 +16,10 @@ func Test_ScheduleFunc(t *testing.T) {
 	count := uint32(0)
 	log.Printf("start\n")
 
-	tm.ScheduleFunc(time.Millisecond*100, func() {
-		log.Printf("schedule\n")
+	tm.ScheduleFunc(time.Millisecond*100, func(args ...interface{}) {
+		log.Printf("schedule, args:%v\n", args)
 		atomic.AddUint32(&count, 1)
-	})
+	}, "example", 9826)
 
 	go func() {
 		time.Sleep(570 * time.Millisecond)
@@ -37,18 +37,18 @@ func Test_AfterFunc(t *testing.T) {
 	log.Printf("start\n")
 
 	count := uint32(0)
-	tm.AfterFunc(time.Millisecond*20, func() {
-		log.Printf("after Millisecond * 20")
+	tm.AfterFunc(time.Millisecond*20, func(args ...interface{}) {
+		log.Printf("after Millisecond * 20, args:%v\n", args)
 		atomic.AddUint32(&count, 1)
-	})
+	}, "example", 9826)
 
-	tm.AfterFunc(time.Second, func() {
-		log.Printf("after second")
+	tm.AfterFunc(time.Second, func(args ...interface{}) {
+		log.Printf("after second\n")
 		atomic.AddUint32(&count, 1)
 	})
 
 	/*
-		tm.AfterFunc(time.Minute, func() {
+		tm.AfterFunc(time.Minute, func(args ...interface{}) {
 			log.Printf("after Minute")
 		})
 	*/
@@ -70,7 +70,7 @@ func Test_AfterFunc(t *testing.T) {
 func Test_Node_Stop_1(t *testing.T) {
 	tm := NewTimer()
 	count := uint32(0)
-	node := tm.AfterFunc(time.Millisecond*10, func() {
+	node := tm.AfterFunc(time.Millisecond*10, func(args ...interface{}) {
 		atomic.AddUint32(&count, 1)
 	})
 	go func() {
@@ -86,7 +86,7 @@ func Test_Node_Stop_1(t *testing.T) {
 func Test_Node_Stop(t *testing.T) {
 	tm := NewTimer()
 	count := uint32(0)
-	node := tm.AfterFunc(time.Millisecond*100, func() {
+	node := tm.AfterFunc(time.Millisecond*100, func(args ...interface{}) {
 		atomic.AddUint32(&count, 1)
 	})
 	node.Stop()

@@ -12,23 +12,23 @@ import (
 
 // 测试周期执行
 func schedule(tm timer.Timer) {
-	tm.ScheduleFunc(200*time.Millisecond, func() {
+	tm.ScheduleFunc(200*time.Millisecond, func(args ...interface{}) {
 		log.Printf("schedule 200 milliseconds\n")
 	})
 
-	tm.ScheduleFunc(time.Second, func() {
+	tm.ScheduleFunc(time.Second, func(args ...interface{}) {
 		log.Printf("schedule second\n")
 	})
 
-	tm.ScheduleFunc(1*time.Minute, func() {
+	tm.ScheduleFunc(1*time.Minute, func(args ...interface{}) {
 		log.Printf("schedule minute\n")
 	})
 
-	tm.ScheduleFunc(1*time.Hour, func() {
+	tm.ScheduleFunc(1*time.Hour, func(args ...interface{}) {
 		log.Printf("schedule hour\n")
 	})
 
-	tm.ScheduleFunc(24*time.Hour, func() {
+	tm.ScheduleFunc(24*time.Hour, func(args ...interface{}) {
 		log.Printf("schedule day\n")
 	})
 }
@@ -43,7 +43,7 @@ func after(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 3600*24; i++ {
 			i := i
-			tm.AfterFunc(time.Second, func() {
+			tm.AfterFunc(time.Second, func(args ...interface{}) {
 				log.Printf("after second:%d\n", i)
 			})
 			time.Sleep(900 * time.Millisecond)
@@ -54,7 +54,7 @@ func after(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 60*24; i++ {
 			i := i
-			tm.AfterFunc(time.Minute, func() {
+			tm.AfterFunc(time.Minute, func(args ...interface{}) {
 				log.Printf("after minute:%d\n", i)
 			})
 			time.Sleep(50 * time.Second)
@@ -65,7 +65,7 @@ func after(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 24; i++ {
 			i := i
-			tm.AfterFunc(time.Hour, func() {
+			tm.AfterFunc(time.Hour, func(args ...interface{}) {
 				log.Printf("after hour:%d\n", i)
 			})
 			time.Sleep(59 * time.Minute)
@@ -76,7 +76,7 @@ func after(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 1; i++ {
 			i := i
-			tm.AfterFunc(24*time.Hour, func() {
+			tm.AfterFunc(24*time.Hour, func(args ...interface{}) {
 				log.Printf("after day:%d\n", i)
 			})
 			time.Sleep(59 * time.Minute)
@@ -95,7 +95,7 @@ func stopNode(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 3600*24; i++ {
 			i := i
-			node := tm.AfterFunc(time.Second, func() {
+			node := tm.AfterFunc(time.Second, func(args ...interface{}) {
 				log.Printf("stop after second:%d\n", i)
 			})
 			time.Sleep(900 * time.Millisecond)
@@ -107,7 +107,7 @@ func stopNode(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 60*24; i++ {
 			i := i
-			node := tm.AfterFunc(time.Minute, func() {
+			node := tm.AfterFunc(time.Minute, func(args ...interface{}) {
 				log.Printf("stop after minute:%d\n", i)
 			})
 			time.Sleep(50 * time.Second)
@@ -119,7 +119,7 @@ func stopNode(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 24; i++ {
 			i := i
-			node := tm.AfterFunc(time.Hour, func() {
+			node := tm.AfterFunc(time.Hour, func(args ...interface{}) {
 				log.Printf("stop after hour:%d\n", i)
 			})
 			time.Sleep(59 * time.Minute)
@@ -131,7 +131,7 @@ func stopNode(tm timer.Timer) {
 		defer wg.Done()
 		for i := 0; i < 1; i++ {
 			i := i
-			node := tm.AfterFunc(23*time.Hour, func() {
+			node := tm.AfterFunc(23*time.Hour, func(args ...interface{}) {
 				log.Printf("stop after day:%d\n", i)
 			})
 			time.Sleep(22 * time.Hour)
