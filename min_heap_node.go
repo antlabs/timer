@@ -12,13 +12,18 @@ type minHeapNode struct {
 	index      int           //在min heap中的索引，方便删除用的
 }
 
-type nodeHeap []minHeapNode
+// TODO 实现
+func (m *minHeapNode) Stop() {
 
-func (n nodeHeap) Len() int           { return len(n) }
-func (n nodeHeap) Less(i, j int) bool { return n[i].userExpire < n[j].userExpire }
-func (n nodeHeap) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+}
 
-func (n *nodeHeap) Push(x any) {
+type nodeHeaps []minHeapNode
+
+func (n nodeHeaps) Len() int           { return len(n) }
+func (n nodeHeaps) Less(i, j int) bool { return n[i].userExpire < n[j].userExpire }
+func (n nodeHeaps) Swap(i, j int)      { n[i], n[j] = n[j], n[i] }
+
+func (n *nodeHeaps) Push(x any) {
 	// Push and Pop use pointer receivers because they modify the slice's length,
 	// not just its contents.
 	*n = append(*n, x.(minHeapNode))
@@ -26,7 +31,7 @@ func (n *nodeHeap) Push(x any) {
 	(*n)[lastIndex].index = lastIndex
 }
 
-func (h *nodeHeap) Pop() any {
+func (h *nodeHeaps) Pop() any {
 	old := *h
 	n := len(old)
 	x := old[n-1]
