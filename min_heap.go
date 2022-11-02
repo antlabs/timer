@@ -3,6 +3,7 @@ package timer
 import (
 	"container/heap"
 	"context"
+	"math"
 	"sync"
 	"time"
 )
@@ -45,6 +46,17 @@ func (m *minHeap) addCallback(expire time.Duration, callback func(), isSchedule 
 
 }
 
+func (m *minHeap) removeTimeNode(node *minHeapNode) {
+	m.mu.Lock()
+	if node.index < 0 || node.index > len(m.minHeaps) {
+		m.mu.Unlock()
+		return
+	}
+
+	heap.Remove(&m.minHeaps, node.index)
+	m.mu.Unlock()
+}
+
 // 周期性定时器
 func (m *minHeap) ScheduleFunc(expire time.Duration, callback func()) TimeNoder {
 	return m.addCallback(expire, callback, true)
@@ -67,25 +79,30 @@ func (m *minHeap) Run() {
 				}
 
 				first := &m.minHeaps[0]
-				var callback func()
 
 				if now.After(first.absExpire) {
+					callback := first.callback
 					if first.isSchedule {
 						first.absExpire = now.Add(first.userExpire)
 						heap.Fix(&m.minHeaps, first.index)
 					} else {
 						m.minHeaps.Pop()
 					}
-				}
-
-				first = &m.minHeaps[0]
-				if now.Before(first.absExpire) {
-					tm.Reset(time.Since(m.minHeaps[0].absExpire))
-				}
-				m.mu.Unlock()
-				if callback != nil {
 					go callback()
 				}
+
+				if m.minHeaps.Len() == 0 {
+					m.mu.Unlock()
+					goto next
+				}
+				first = &m.minHeaps[0]
+				if time.Now().Before(first.absExpire) {
+					to := time.Duration(math.Abs(float64(time.Since(m.minHeaps[0].absExpire))))
+					tm.Reset(to)
+					m.mu.Unlock()
+					goto next
+				}
+				m.mu.Unlock()
 			}
 		case <-m.chAdd:
 			m.mu.Lock()

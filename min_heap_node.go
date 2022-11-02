@@ -5,17 +5,16 @@ import (
 )
 
 type minHeapNode struct {
-	stop       uint32        //stop标记
 	callback   func()        //用户的callback
 	absExpire  time.Time     //绝对时间
 	userExpire time.Duration //过期时间
 	isSchedule bool          //是否是周期性任务
-	index      int           //在min heap中的索引，方便删除用的
+	index      int           //在min heap中的索引，方便删除或者重新推入堆中
+	root       *minHeap
 }
 
-// TODO 实现
 func (m *minHeapNode) Stop() {
-
+	m.root.removeTimeNode(m)
 }
 
 type minHeaps []minHeapNode
