@@ -34,6 +34,7 @@ func (m *minHeap) addCallback(expire time.Duration, callback func(), isSchedule 
 		userExpire: expire,
 		absExpire:  time.Now().Add(expire),
 		isSchedule: isSchedule,
+		root:       m,
 	}
 
 	heap.Push(&m.minHeaps, node)
@@ -48,7 +49,7 @@ func (m *minHeap) addCallback(expire time.Duration, callback func(), isSchedule 
 
 func (m *minHeap) removeTimeNode(node *minHeapNode) {
 	m.mu.Lock()
-	if node.index < 0 || node.index > len(m.minHeaps) {
+	if node.index < 0 || node.index > len(m.minHeaps) || len(m.minHeaps) == 0 {
 		m.mu.Unlock()
 		return
 	}
@@ -63,7 +64,7 @@ func (m *minHeap) ScheduleFunc(expire time.Duration, callback func()) TimeNoder 
 }
 
 // 运行
-// 为了避免空转cpu, 会等待一个chan, 只要AfterFunc或者SchedulerFunc被调用就会往这个chan里面写值
+// 为了避免空转cpu, 会等待一个chan, 只要AfterFunc或者ScheduleFunc被调用就会往这个chan里面写值
 func (m *minHeap) Run() {
 
 	tm := time.NewTimer(time.Hour)

@@ -6,6 +6,7 @@ timer是高性能定时器库
 ## feature
 * 支持一次性定时器
 * 支持周期性定时器
+* 支持多种数据结构后端，最小堆，5级时间轮
 
 ## 一次性定时器
 ```go
@@ -71,6 +72,17 @@ func main() {
 	tk3.Stop() //取消tk3
 
 	tm.Run()
+}
+```
+## 选择不同的的数据结构
+```go
+import (
+    "github.com/antlabs/timer"
+    "log"
+)
+
+func main() {
+        tm := timer.NewTimer(timer.WithMinHeap())// 选择最小堆
 }
 ```
 ## benchmark
