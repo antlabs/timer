@@ -23,6 +23,19 @@ type TimeNoder interface {
 }
 
 // 定时器构造函数
-func NewTimer() Timer {
+func NewTimer(opt ...Option) Timer {
+	var o option
+	for _, cb := range opt {
+		cb(&o)
+	}
+
+	if o.timeWheel {
+		return newTimeWheel()
+	}
+
+	if o.minHeap {
+		return newMinHeap()
+	}
+
 	return newTimeWheel()
 }

@@ -13,6 +13,7 @@ _long-time-test/long-time-test
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+cover.cov
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
