@@ -45,7 +45,27 @@ func main() {
         tm.Run()
 }
 ```
+## 自定义周期性定时器
+实现时间翻倍定时的例子
+```go
+type curstomTest struct {
+	count int
+}
+// 只要实现Next接口就行
+func (c *curstomTest) Next(now time.Time) (rv time.Time) {
+	rv = now.Add(time.Duration(c.count) * time.Millisecond * 10)
+	c.count++
+	return
+}
 
+func main() {
+        tm := timer.NewTimer(timer.WithMinHeap())
+        node := tm.CustomFunc(&curstomTest{count: 1}, func() {
+                log.Printf("%v\n", time.Now())
+        })
+        tm.Run()
+}
+```
 ## 取消某一个定时器
 ```go
 import (
@@ -82,7 +102,7 @@ import (
 )
 
 func main() {
-        tm := timer.NewTimer(timer.WithMinHeap())// 选择最小堆
+        tm := timer.NewTimer(timer.WithMinHeap())// 选择最小堆，默认时间轮
 }
 ```
 ## benchmark

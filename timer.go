@@ -2,6 +2,10 @@ package timer
 
 import "time"
 
+type Next interface {
+	Next(time.Time) time.Time
+}
+
 // 定时器接口
 type Timer interface {
 	// 一次性定时器
@@ -9,6 +13,9 @@ type Timer interface {
 
 	// 周期性定时器
 	ScheduleFunc(expire time.Duration, callback func()) TimeNoder
+
+	// 自定义下次的时间
+	CustomFunc(n Next, callback func()) TimeNoder
 
 	// 运行
 	Run()

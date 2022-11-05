@@ -21,20 +21,41 @@ type minHeap struct {
 
 // 一次性定时器
 func (m *minHeap) AfterFunc(expire time.Duration, callback func()) TimeNoder {
-	return m.addCallback(expire, callback, false)
+	return m.addCallback(expire, nil, callback, false)
+}
+
+// 周期性定时器
+func (m *minHeap) ScheduleFunc(expire time.Duration, callback func()) TimeNoder {
+	return m.addCallback(expire, nil, callback, true)
+}
+
+// 自定义下次的时间
+func (m *minHeap) CustomFunc(n Next, callback func()) TimeNoder {
+	return m.addCallback(time.Duration(0), n, callback, true)
 }
 
 // 加任务
-func (m *minHeap) addCallback(expire time.Duration, callback func(), isSchedule bool) TimeNoder {
+func (m *minHeap) addCallback(expire time.Duration, n Next, callback func(), isSchedule bool) TimeNoder {
+	select {
+	case <-m.ctx.Done():
+		panic("cannot add a task to a closed timer")
+	default:
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	node := minHeapNode{
 		callback:   callback,
 		userExpire: expire,
+		next:       n,
 		absExpire:  time.Now().Add(expire),
 		isSchedule: isSchedule,
 		root:       m,
+	}
+
+	if n != nil {
+		node.absExpire = n.Next(time.Now())
 	}
 
 	heap.Push(&m.minHeaps, node)
@@ -58,11 +79,6 @@ func (m *minHeap) removeTimeNode(node *minHeapNode) {
 	m.mu.Unlock()
 }
 
-// 周期性定时器
-func (m *minHeap) ScheduleFunc(expire time.Duration, callback func()) TimeNoder {
-	return m.addCallback(expire, callback, true)
-}
-
 // 运行
 // 为了避免空转cpu, 会等待一个chan, 只要AfterFunc或者ScheduleFunc被调用就会往这个chan里面写值
 func (m *minHeap) Run() {
@@ -81,10 +97,11 @@ func (m *minHeap) Run() {
 
 				first := &m.minHeaps[0]
 
+				// 时间到
 				if now.After(first.absExpire) {
 					callback := first.callback
 					if first.isSchedule {
-						first.absExpire = now.Add(first.userExpire)
+						first.absExpire = first.Next(now)
 						heap.Fix(&m.minHeaps, first.index)
 					} else {
 						m.minHeaps.Pop()

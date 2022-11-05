@@ -278,6 +278,11 @@ func (t *timeWheel) run(get10Ms func() time.Duration) {
 
 }
 
+// 自定义, TODO
+func (t *timeWheel) CustomFunc(n Next, callback func()) TimeNoder {
+	return &timeNode{}
+}
+
 func (t *timeWheel) Run() {
 
 	// 10ms精度

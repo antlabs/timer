@@ -8,6 +8,7 @@ type minHeapNode struct {
 	callback   func()        //用户的callback
 	absExpire  time.Time     //绝对时间
 	userExpire time.Duration //过期时间段
+	next       Next          //自定义下个触发的时间点
 	isSchedule bool          //是否是周期性任务
 	index      int           //在min heap中的索引，方便删除或者重新推入堆中
 	root       *minHeap
@@ -15,6 +16,13 @@ type minHeapNode struct {
 
 func (m *minHeapNode) Stop() {
 	m.root.removeTimeNode(m)
+}
+
+func (m *minHeapNode) Next(now time.Time) time.Time {
+	if m.next != nil {
+		return m.next.Next(now)
+	}
+	return now.Add(m.userExpire)
 }
 
 type minHeaps []minHeapNode

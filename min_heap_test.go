@@ -185,3 +185,49 @@ func Test_Run_Stop(t *testing.T) {
 		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
 	})
 }
+
+type curstomTest struct {
+	count int
+}
+
+func (c *curstomTest) Next(now time.Time) (rv time.Time) {
+	rv = now.Add(time.Duration(c.count) * time.Millisecond * 10)
+	c.count++
+	return
+}
+
+func Test_CustomFunc(t *testing.T) {
+	t.Run("custom", func(t *testing.T) {
+
+		tm := NewTimer(WithMinHeap())
+		tc := make(chan time.Duration, 2)
+		now := time.Now()
+		count := uint32(1)
+		node := tm.CustomFunc(&curstomTest{count: 1}, func() {
+			if atomic.LoadUint32(&count) == 2 {
+				return
+			}
+			atomic.AddUint32(&count, 1)
+			tc <- time.Since(now)
+		})
+
+		go func() {
+			time.Sleep(time.Millisecond * 30)
+			node.Stop()
+			tm.Stop()
+		}()
+
+		tm.Run()
+		close(tc)
+		cnt := 1
+		for tv := range tc {
+			left := time.Millisecond * 10 * time.Duration(cnt)
+			right := time.Duration(cnt) * 2 * 10 * time.Millisecond
+			if tv < left || tv > right {
+				t.Errorf("index(%d) (%v)tc < %v || tc > %v", cnt, tv, left, right)
+			}
+			cnt++
+		}
+		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
+	})
+}
