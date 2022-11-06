@@ -5,6 +5,7 @@ import (
 	"context"
 	"math"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -13,10 +14,11 @@ var _ Timer = (*minHeap)(nil)
 type minHeap struct {
 	mu sync.Mutex
 	minHeaps
-	chAdd  chan struct{}
-	ctx    context.Context
-	cancel context.CancelFunc
-	wait   sync.WaitGroup
+	chAdd    chan struct{}
+	ctx      context.Context
+	cancel   context.CancelFunc
+	wait     sync.WaitGroup
+	runCount uint32 //测试时使用
 }
 
 // 一次性定时器
@@ -126,7 +128,7 @@ func (m *minHeap) Run() {
 			m.mu.Lock()
 			// 极端情况，加完任务立即给删除了, 判断下当前堆中是否有元素
 			if m.minHeaps.Len() > 0 {
-				tm.Reset(time.Since(m.minHeaps[0].absExpire))
+				tm.Reset(m.minHeaps[0].absExpire.Sub(time.Now()))
 			}
 			m.mu.Unlock()
 			// 进入事件循环，如果为空就会从事件循环里面退出
@@ -136,6 +138,7 @@ func (m *minHeap) Run() {
 			return
 		}
 	next:
+		atomic.AddUint32(&m.runCount, 1)
 	}
 }
 
