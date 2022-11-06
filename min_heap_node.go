@@ -29,7 +29,11 @@ type minHeaps []minHeapNode
 
 func (m minHeaps) Len() int           { return len(m) }
 func (m minHeaps) Less(i, j int) bool { return m[i].absExpire.Before(m[j].absExpire) }
-func (m minHeaps) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m minHeaps) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+	m[i].index = i
+	m[j].index = j
+}
 
 func (m *minHeaps) Push(x any) {
 	// Push and Pop use pointer receivers because they modify the slice's length,
