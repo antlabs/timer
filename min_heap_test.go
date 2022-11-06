@@ -196,6 +196,7 @@ func (c *curstomTest) Next(now time.Time) (rv time.Time) {
 	return
 }
 
+// 验证自定义函数的运行间隔时间
 func Test_CustomFunc(t *testing.T) {
 	t.Run("custom", func(t *testing.T) {
 
@@ -231,5 +232,28 @@ func Test_CustomFunc(t *testing.T) {
 		}
 		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
 		assert.Equal(t, mh.runCount, uint32(3))
+	})
+}
+
+// 验证运行次数是符合预期的
+func Test_RunCount(t *testing.T) {
+	t.Run("runcount-10ms", func(t *testing.T) {
+		tm := NewTimer(WithMinHeap())
+		max := 10
+		go func() {
+			tm.Run()
+		}()
+
+		count := uint32(0)
+		for i := 0; i < max; i++ {
+
+			tm.ScheduleFunc(time.Millisecond*10, func() {
+				atomic.AddUint32(&count, 1)
+			})
+		}
+
+		time.Sleep(time.Millisecond * 15)
+		tm.Stop()
+		assert.Equal(t, count, uint32(max))
 	})
 }
