@@ -200,6 +200,7 @@ func Test_CustomFunc(t *testing.T) {
 	t.Run("custom", func(t *testing.T) {
 
 		tm := NewTimer(WithMinHeap())
+		mh := tm.(*minHeap)
 		tc := make(chan time.Duration, 2)
 		now := time.Now()
 		count := uint32(1)
@@ -229,5 +230,6 @@ func Test_CustomFunc(t *testing.T) {
 			cnt++
 		}
 		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
+		assert.Equal(t, mh.runCount, uint32(3))
 	})
 }
