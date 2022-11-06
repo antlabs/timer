@@ -85,7 +85,8 @@ func (m *minHeap) removeTimeNode(node *minHeapNode) {
 // 为了避免空转cpu, 会等待一个chan, 只要AfterFunc或者ScheduleFunc被调用就会往这个chan里面写值
 func (m *minHeap) Run() {
 
-	tm := time.NewTimer(time.Hour)
+	timeout := time.Hour
+	tm := time.NewTimer(timeout)
 	for {
 		select {
 		case <-tm.C:
@@ -93,14 +94,19 @@ func (m *minHeap) Run() {
 				m.mu.Lock()
 				now := time.Now()
 				if m.minHeaps.Len() == 0 {
+					tm.Reset(timeout)
 					m.mu.Unlock()
 					goto next
 				}
 
-				first := &m.minHeaps[0]
+				for {
+					first := &m.minHeaps[0]
 
-				// 时间到
-				if now.After(first.absExpire) {
+					// 时间未到直接过滤掉
+					if !now.After(first.absExpire) {
+						break
+					}
+
 					callback := first.callback
 					if first.isSchedule {
 						first.absExpire = first.Next(now)
@@ -109,13 +115,15 @@ func (m *minHeap) Run() {
 						m.minHeaps.Pop()
 					}
 					go callback()
+
+					if m.minHeaps.Len() == 0 {
+						tm.Reset(timeout)
+						m.mu.Unlock()
+						goto next
+					}
 				}
 
-				if m.minHeaps.Len() == 0 {
-					m.mu.Unlock()
-					goto next
-				}
-				first = &m.minHeaps[0]
+				first := &m.minHeaps[0]
 				if time.Now().Before(first.absExpire) {
 					to := time.Duration(math.Abs(float64(time.Since(m.minHeaps[0].absExpire))))
 					tm.Reset(to)
