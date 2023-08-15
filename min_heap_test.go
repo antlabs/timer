@@ -10,9 +10,7 @@ import (
 
 // 测试AfterFunc有没有运行以及时间间隔可对
 func Test_MinHeap_AfterFunc_Run(t *testing.T) {
-
 	t.Run("1ms", func(t *testing.T) {
-
 		tm := NewTimer(WithMinHeap())
 		now := time.Now()
 		go tm.Run()
@@ -37,7 +35,6 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			}
 		}
 		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
 	})
 
 	t.Run("10ms", func(t *testing.T) {
@@ -64,10 +61,9 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			if tv < left || tv > right {
 				t.Errorf("index(%d) (%v)tc < %v || tc > %v", cnt, tv, left, right)
 			}
-			//cnt++
+			// cnt++
 		}
 		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
 	})
 
 	t.Run("90ms", func(t *testing.T) {
@@ -75,20 +71,16 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 		go tm.Run()
 		count := int32(0)
 		tm.AfterFunc(time.Millisecond*90, func() { atomic.AddInt32(&count, 1) })
-		tm.AfterFunc(time.Millisecond*90, func() { atomic.AddInt32(&count, 1) })
+		tm.AfterFunc(time.Millisecond*90, func() { atomic.AddInt32(&count, 2) })
 
 		time.Sleep(time.Millisecond * 180)
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
+		assert.Equal(t, atomic.LoadInt32(&count), int32(3))
 	})
-
 }
 
 // 测试Schedule 运行的周期可对
 func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
-
 	t.Run("1ms", func(t *testing.T) {
-
 		tm := NewTimer(WithMinHeap())
 		go tm.Run()
 		count := int32(0)
@@ -108,7 +100,6 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 5)
 		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
 	})
 
 	t.Run("10ms", func(t *testing.T) {
@@ -121,7 +112,7 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		node := tm.ScheduleFunc(time.Millisecond*10, func() {
 			atomic.AddInt32(&count, 1)
 			tc <- time.Since(now)
-			if atomic.LoadInt32(&count) == 2 {
+			if atomic.LoadInt32(&count) >= 2 {
 				c <- true
 			}
 		})
@@ -143,7 +134,6 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 			cnt++
 		}
 		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
 	})
 
 	t.Run("30ms", func(t *testing.T) {
@@ -159,14 +149,12 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 			}
 		})
 		go func() {
-
 			<-c
 			node.Stop()
 		}()
 
 		time.Sleep(time.Millisecond * 70)
 		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
-
 	})
 }
 
@@ -187,34 +175,35 @@ func Test_Run_Stop(t *testing.T) {
 }
 
 type curstomTest struct {
-	count int
+	count int32
 }
 
 func (c *curstomTest) Next(now time.Time) (rv time.Time) {
 	rv = now.Add(time.Duration(c.count) * time.Millisecond * 10)
-	c.count++
+	atomic.AddInt32(&c.count, 1)
 	return
 }
 
 // 验证自定义函数的运行间隔时间
 func Test_CustomFunc(t *testing.T) {
 	t.Run("custom", func(t *testing.T) {
-
 		tm := NewTimer(WithMinHeap())
 		mh := tm.(*minHeap)
 		tc := make(chan time.Duration, 2)
 		now := time.Now()
 		count := uint32(1)
+		stop := make(chan bool, 1)
 		node := tm.CustomFunc(&curstomTest{count: 1}, func() {
 			if atomic.LoadUint32(&count) == 2 {
 				return
 			}
 			atomic.AddUint32(&count, 1)
 			tc <- time.Since(now)
+			close(stop)
 		})
 
 		go func() {
-			time.Sleep(time.Millisecond * 30)
+			<-stop
 			node.Stop()
 			tm.Stop()
 		}()
@@ -231,7 +220,7 @@ func Test_CustomFunc(t *testing.T) {
 			cnt++
 		}
 		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
-		assert.Equal(t, mh.runCount, uint32(3))
+		assert.Equal(t, mh.runCount, uint32(1))
 	})
 }
 
@@ -246,7 +235,6 @@ func Test_RunCount(t *testing.T) {
 
 		count := uint32(0)
 		for i := 0; i < max; i++ {
-
 			tm.ScheduleFunc(time.Millisecond*10, func() {
 				atomic.AddUint32(&count, 1)
 			})

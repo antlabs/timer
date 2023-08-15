@@ -18,7 +18,7 @@ type minHeap struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	wait     sync.WaitGroup
-	runCount uint32 //测试时使用
+	runCount uint32 // 测试时使用
 }
 
 // 一次性定时器
@@ -60,14 +60,13 @@ func (m *minHeap) addCallback(expire time.Duration, n Next, callback func(), isS
 		node.absExpire = n.Next(time.Now())
 	}
 
-	heap.Push(&m.minHeaps, node)
+	heap.Push(&m.minHeaps, &node)
 	select {
 	case m.chAdd <- struct{}{}:
 	default:
 	}
 
 	return &node
-
 }
 
 func (m *minHeap) removeTimeNode(node *minHeapNode) {
@@ -84,7 +83,6 @@ func (m *minHeap) removeTimeNode(node *minHeapNode) {
 // 运行
 // 为了避免空转cpu, 会等待一个chan, 只要AfterFunc或者ScheduleFunc被调用就会往这个chan里面写值
 func (m *minHeap) Run() {
-
 	timeout := time.Hour
 	tm := time.NewTimer(timeout)
 	for {
@@ -100,7 +98,7 @@ func (m *minHeap) Run() {
 				}
 
 				for {
-					first := &m.minHeaps[0]
+					first := m.minHeaps[0]
 
 					// 时间未到直接过滤掉
 					if !now.After(first.absExpire) {
@@ -112,8 +110,9 @@ func (m *minHeap) Run() {
 						first.absExpire = first.Next(now)
 						heap.Fix(&m.minHeaps, first.index)
 					} else {
-						m.minHeaps.Pop()
+						heap.Pop(&m.minHeaps)
 					}
+					atomic.AddUint32(&m.runCount, 1)
 					go callback()
 
 					if m.minHeaps.Len() == 0 {
@@ -123,7 +122,7 @@ func (m *minHeap) Run() {
 					}
 				}
 
-				first := &m.minHeaps[0]
+				first := m.minHeaps[0]
 				if time.Now().Before(first.absExpire) {
 					to := time.Duration(math.Abs(float64(time.Since(m.minHeaps[0].absExpire))))
 					tm.Reset(to)
@@ -146,7 +145,6 @@ func (m *minHeap) Run() {
 			return
 		}
 	next:
-		atomic.AddUint32(&m.runCount, 1)
 	}
 }
 
