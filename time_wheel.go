@@ -46,7 +46,6 @@ type timeWheel struct {
 }
 
 func newTimeWheel() *timeWheel {
-
 	ctx, cancel := context.WithCancel(context.Background())
 
 	t := &timeWheel{ctx: ctx, cancel: cancel}
@@ -57,10 +56,8 @@ func newTimeWheel() *timeWheel {
 }
 
 func (t *timeWheel) init() {
-
 	for i := 0; i < nearSize; i++ {
 		t.t1[i] = newTimeHead(1, uint64(i))
-
 	}
 
 	for i := 0; i < 4; i++ {
@@ -69,7 +66,7 @@ func (t *timeWheel) init() {
 		}
 	}
 
-	t.curTimePoint = get10Ms()
+	// t.curTimePoint = get10Ms()
 }
 
 func maxVal() uint64 {
@@ -85,7 +82,6 @@ func (t *timeWheel) index(n int) uint64 {
 }
 
 func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
-
 	var head *Time
 	expire := node.expire
 	idx := expire - jiffies
@@ -126,7 +122,6 @@ func (t *timeWheel) add(node *timeNode, jiffies uint64) *timeNode {
 }
 
 func (t *timeWheel) AfterFunc(expire time.Duration, callback func()) TimeNoder {
-
 	jiffies := atomic.LoadUint64(&t.jiffies)
 
 	expire = expire/(time.Millisecond*10) + time.Duration(jiffies)
@@ -144,7 +139,6 @@ func getExpire(expire time.Duration, jiffies uint64) time.Duration {
 }
 
 func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func()) TimeNoder {
-
 	jiffies := atomic.LoadUint64(&t.jiffies)
 
 	expire := getExpire(userExpire, jiffies)
@@ -165,7 +159,6 @@ func (t *timeWheel) Stop() {
 
 // 移动链表
 func (t *timeWheel) cascade(levelIndex int, index int) {
-
 	tmp := newTimeHead(0, 0)
 
 	l := t.t2Tot5[levelIndex][index]
@@ -186,22 +179,20 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 		node := (*timeNode)(pos.Entry(offset))
 		t.add(node, atomic.LoadUint64(&t.jiffies))
 	})
-
 }
 
 // moveAndExec函数功能
-//1. 先移动到near链表里面
-//2. near链表节点为空时，从上一层里面移动一些节点到下一层
-//3. 再执行
+// 1. 先移动到near链表里面
+// 2. near链表节点为空时，从上一层里面移动一些节点到下一层
+// 3. 再执行
 func (t *timeWheel) moveAndExec() {
-
 	// 这里时间溢出
 	if uint32(t.jiffies) == 0 {
 		// TODO
 		// return
 	}
 
-	//如果本层的盘子没有定时器，这时候从上层的盘子移动一些过来
+	// 如果本层的盘子没有定时器，这时候从上层的盘子移动一些过来
 	index := t.jiffies & nearMask
 	if index == 0 {
 		for i := 0; i <= 3; i++ {
@@ -249,7 +240,6 @@ func (t *timeWheel) moveAndExec() {
 			t.add(val, jiffies)
 		}
 	})
-
 }
 
 // get10Ms函数通过参数传递，为了方便测试
@@ -275,7 +265,6 @@ func (t *timeWheel) run(get10Ms func() time.Duration) {
 	for i := 0; i < int(diff); i++ {
 		t.moveAndExec()
 	}
-
 }
 
 // 自定义, TODO
@@ -284,7 +273,7 @@ func (t *timeWheel) CustomFunc(n Next, callback func()) TimeNoder {
 }
 
 func (t *timeWheel) Run() {
-
+	t.curTimePoint = get10Ms()
 	// 10ms精度
 	tk := time.NewTicker(time.Millisecond * 10)
 	defer tk.Stop()
