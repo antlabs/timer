@@ -6,24 +6,43 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_maxVal(t *testing.T) {
-	assert.Equal(t, maxVal(), uint64(math.MaxUint32))
+
+	if maxVal() != uint64(math.MaxUint32) {
+		t.Error("maxVal() != uint64(math.MaxUint32)")
+	}
 }
 
 func Test_LevelMax(t *testing.T) {
-	assert.Equal(t, levelMax(1), uint64(1<<(nearShift+levelShift)))
-	assert.Equal(t, levelMax(2), uint64(1<<(nearShift+2*levelShift)))
-	assert.Equal(t, levelMax(3), uint64(1<<(nearShift+3*levelShift)))
-	assert.Equal(t, levelMax(4), uint64(1<<(nearShift+4*levelShift)))
+	if levelMax(1) != uint64(1<<(nearShift+levelShift)) {
+		t.Error("levelMax(1) != uint64(1<<(nearShift+levelShift))")
+	}
+
+	if levelMax(2) != uint64(1<<(nearShift+2*levelShift)) {
+		t.Error("levelMax(2) != uint64(1<<(nearShift+2*levelShift))")
+	}
+
+	if levelMax(3) != uint64(1<<(nearShift+3*levelShift)) {
+		t.Error("levelMax(3) != uint64(1<<(nearShift+3*levelShift))")
+	}
+
+	if levelMax(4) != uint64(1<<(nearShift+4*levelShift)) {
+		t.Error("levelMax(4) != uint64(1<<(nearShift+4*levelShift))")
+	}
+
 }
 
 func Test_GenVersion(t *testing.T) {
-	assert.Equal(t, genVersionHeight(1, 0xf), uint64(0x0001000f00000000))
-	assert.Equal(t, genVersionHeight(1, 64), uint64(0x0001004000000000))
+	if genVersionHeight(1, 0xf) != uint64(0x0001000f00000000) {
+		t.Error("genVersionHeight(1, 0xf) != uint64(0x0001000f00000000)")
+	}
+
+	if genVersionHeight(1, 64) != uint64(0x0001004000000000) {
+		t.Error("genVersionHeight(2, 0xf) != uint64(0x0001004000000000)")
+	}
+
 }
 
 // 测试1小时
@@ -49,7 +68,11 @@ func Test_hour(t *testing.T) {
 	case <-done:
 	case <-time.After(time.Second / 100):
 	}
-	assert.True(t, *testHour)
+
+	if *testHour == false {
+		t.Error("testHour == false")
+	}
+
 }
 
 // 测试周期性定时器, 5s
@@ -84,8 +107,9 @@ func Test_ScheduleFunc_5s(t *testing.T) {
 	case <-time.After(time.Second / 100):
 	}
 
-	assert.Equal(t, total, first5)
-
+	if total != first5 {
+		t.Errorf("total:%d != first5:%d\n", total, first5)
+	}
 }
 
 // 测试周期性定时器, 1hour
@@ -119,7 +143,9 @@ func Test_ScheduleFunc_hour(t *testing.T) {
 	case <-time.After(time.Second / 100):
 	}
 
-	assert.Equal(t, total, first5)
+	if total != first5 {
+		t.Errorf("total:%d != first5:%d\n", total, first5)
+	}
 
 }
 
@@ -154,6 +180,7 @@ func Test_ScheduleFunc_day(t *testing.T) {
 	case <-time.After(time.Second / 100):
 	}
 
-	assert.Equal(t, total, first5)
-
+	if total != first5 {
+		t.Errorf("total:%d != first5:%d\n", total, first5)
+	}
 }
