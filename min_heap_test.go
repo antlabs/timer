@@ -4,8 +4,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // 测试AfterFunc有没有运行以及时间间隔可对
@@ -31,10 +29,14 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 		close(tc)
 		for tv := range tc {
 			if tv < time.Millisecond || tv > 2*time.Millisecond {
-				assert.Fail(t, "tc < time.Millisecond tc > 2*time.Millisecond")
+				t.Errorf("tc < time.Millisecond tc > 2*time.Millisecond")
+
 			}
 		}
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
 	})
 
 	t.Run("10ms", func(t *testing.T) {
@@ -63,7 +65,10 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			}
 			// cnt++
 		}
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
 	})
 
 	t.Run("90ms", func(t *testing.T) {
@@ -74,7 +79,10 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 		tm.AfterFunc(time.Millisecond*90, func() { atomic.AddInt32(&count, 2) })
 
 		time.Sleep(time.Millisecond * 180)
-		assert.Equal(t, atomic.LoadInt32(&count), int32(3))
+		if atomic.LoadInt32(&count) != 3 {
+			t.Errorf("count != 3")
+		}
+
 	})
 }
 
@@ -99,7 +107,10 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		}()
 
 		time.Sleep(time.Millisecond * 5)
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
 	})
 
 	t.Run("10ms", func(t *testing.T) {
@@ -133,7 +144,11 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 			}
 			cnt++
 		}
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
+
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
 	})
 
 	t.Run("30ms", func(t *testing.T) {
@@ -154,7 +169,10 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		}()
 
 		time.Sleep(time.Millisecond * 70)
-		assert.Equal(t, atomic.LoadInt32(&count), int32(2))
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
 	})
 }
 
@@ -170,7 +188,9 @@ func Test_Run_Stop(t *testing.T) {
 			tm.Stop()
 		}()
 		tm.Run()
-		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
+		if atomic.LoadUint32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
 	})
 }
 
@@ -219,8 +239,14 @@ func Test_CustomFunc(t *testing.T) {
 			}
 			cnt++
 		}
-		assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
-		assert.Equal(t, mh.runCount, uint32(1))
+		if atomic.LoadUint32(&count) != 2 {
+			t.Errorf("count != 2")
+		}
+
+		if mh.runCount != uint32(1) {
+			t.Errorf("mh.runCount != 1")
+		}
+
 	})
 }
 
@@ -242,6 +268,9 @@ func Test_RunCount(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 15)
 		tm.Stop()
-		assert.Equal(t, count, uint32(max))
+		if count != uint32(max) {
+			t.Errorf("count != %d", max)
+		}
+
 	})
 }

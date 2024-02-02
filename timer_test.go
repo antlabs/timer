@@ -5,8 +5,6 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"gopkg.in/go-playground/assert.v1"
 )
 
 func Test_ScheduleFunc(t *testing.T) {
@@ -28,7 +26,10 @@ func Test_ScheduleFunc(t *testing.T) {
 	}()
 
 	tm.Run()
-	assert.Equal(t, atomic.LoadUint32(&count), uint32(5))
+	if count != 5 {
+		t.Errorf("count:%d != 5\n", count)
+	}
+
 }
 
 func Test_AfterFunc(t *testing.T) {
@@ -64,7 +65,10 @@ func Test_AfterFunc(t *testing.T) {
 		tm.Stop()
 	}()
 	tm.Run()
-	assert.Equal(t, atomic.LoadUint32(&count), uint32(2))
+	if count != 2 {
+		t.Errorf("count:%d != 2\n", count)
+	}
+
 }
 
 func Test_Node_Stop_1(t *testing.T) {
@@ -80,7 +84,9 @@ func Test_Node_Stop_1(t *testing.T) {
 	}()
 
 	tm.Run()
-	assert.NotEqual(t, count, 1)
+	if count != 1 {
+		t.Errorf("count:%d == 1\n", count)
+	}
 }
 
 func Test_Node_Stop(t *testing.T) {
@@ -96,5 +102,8 @@ func Test_Node_Stop(t *testing.T) {
 	}()
 	tm.Run()
 
-	assert.NotEqual(t, count, 1)
+	if count == 1 {
+		t.Errorf("count:%d == 1\n", count)
+	}
+
 }
