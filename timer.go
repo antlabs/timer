@@ -27,6 +27,7 @@ type Timer interface {
 // 停止单个定时器
 type TimeNoder interface {
 	Stop()
+	Reset(d time.Duration)
 }
 
 // 定时器构造函数

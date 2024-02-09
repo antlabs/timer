@@ -67,8 +67,10 @@ type timeNode struct {
 // 1.存在于初始化链表中
 // 2.被移动到tmp链表
 // 3.1 和 3.2是if else的状态
-// 	3.1被移动到new链表
-// 	3.2直接执行
+//
+//	3.1被移动到new链表
+//	3.2直接执行
+//
 // 1和3.1状态是没有问题的
 // 2和3.2状态会是没有锁保护下的操作,会有数据竞争
 func (t *timeNode) Stop() {
@@ -86,4 +88,8 @@ func (t *timeNode) Stop() {
 	}
 
 	cpyList.Del(&t.Head)
+}
+
+func (t *timeNode) Reset(d time.Duration) {
+
 }
