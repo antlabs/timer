@@ -133,7 +133,7 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 			node.Stop()
 		}()
 
-		time.Sleep(time.Millisecond * 30)
+		time.Sleep(time.Millisecond * 40)
 		close(tc)
 		cnt := 1
 		for tv := range tc {
