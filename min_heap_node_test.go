@@ -4,12 +4,11 @@ import (
 	"container/heap"
 	"testing"
 	"time"
-	"unsafe"
 )
 
 func Test_NodeSizeof(t *testing.T) {
 	t.Run("输出最小堆node的sizeof", func(t *testing.T) {
-		t.Logf("minHeapNode size: %d， %d\n", unsafe.Sizeof(minHeapNode{}), unsafe.Sizeof(time.Timer{}))
+		// t.Logf("minHeapNode size: %d， %d\n", unsafe.Sizeof(minHeapNode{}), unsafe.Sizeof(time.Timer{}))
 	})
 }
 func Test_MinHeap(t *testing.T) {

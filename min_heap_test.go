@@ -146,7 +146,7 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		}
 
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
