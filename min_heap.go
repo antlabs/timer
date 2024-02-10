@@ -86,7 +86,9 @@ func (m *minHeap) removeTimeNode(node *minHeapNode) {
 
 func (m *minHeap) resetTimeNode(node *minHeapNode, d time.Duration) {
 	m.mu.Lock()
-	heap.Push(&m.minHeaps, node)
+	node.userExpire = d
+	node.absExpire = time.Now().Add(d)
+	heap.Fix(&m.minHeaps, int(node.index))
 	select {
 	case m.chAdd <- struct{}{}:
 	default:

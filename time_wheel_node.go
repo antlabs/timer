@@ -59,7 +59,7 @@ type timeNode struct {
 	list       unsafe.Pointer //存放表头信息
 	version    uint64         //保存节点版本信息
 	isSchedule bool
-
+	root       *timeWheel
 	list.Head
 }
 
@@ -90,6 +90,20 @@ func (t *timeNode) Stop() {
 	cpyList.Del(&t.Head)
 }
 
-func (t *timeNode) Reset(d time.Duration) {
+// warning: 该函数目前没有稳定
+func (t *timeNode) Reset(expire time.Duration) {
+	cpyList := (*Time)(atomic.LoadPointer(&t.list))
+	cpyList.Lock()
+	defer cpyList.Unlock()
+	// TODO: 这里有一个问题，如果在执行Reset的时候，这个节点已经被移动到tmp链表
+	// if atomic.LoadUint64(&t.version) != atomic.LoadUint64(&cpyList.version) {
+	// 	return
+	// }
+	cpyList.Del(&t.Head)
+	jiffies := atomic.LoadUint64(&t.root.jiffies)
 
+	expire = expire/(time.Millisecond*10) + time.Duration(jiffies)
+	t.expire = uint64(expire)
+
+	t.root.add(t, atomic.LoadUint64(&t.root.jiffies))
 }

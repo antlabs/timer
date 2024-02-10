@@ -129,6 +129,7 @@ func (t *timeWheel) AfterFunc(expire time.Duration, callback func()) TimeNoder {
 	node := &timeNode{
 		expire:   uint64(expire),
 		callback: callback,
+		root:     t,
 	}
 
 	return t.add(node, jiffies)
@@ -148,6 +149,7 @@ func (t *timeWheel) ScheduleFunc(userExpire time.Duration, callback func()) Time
 		expire:     uint64(expire),
 		callback:   callback,
 		isSchedule: true,
+		root:       t,
 	}
 
 	return t.add(node, jiffies)
