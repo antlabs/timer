@@ -18,10 +18,7 @@ func (m *minHeapNode) Stop() {
 	m.root.removeTimeNode(m)
 }
 func (m *minHeapNode) Reset(d time.Duration) {
-	// m.root.removeTimeNode(m)
-	// m.userExpire = d
-	// m.absExpire = time.Now().Add(d)
-	// // m.root.addTimeNode(m)
+
 }
 
 func (m *minHeapNode) Next(now time.Time) time.Time {
