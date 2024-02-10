@@ -110,6 +110,7 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			// cnt++
 		}
 		if atomic.LoadInt32(&count) != 2 {
+
 			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
@@ -136,19 +137,14 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
 		go tm.Run()
 		count := int32(0)
-		c := make(chan bool, 1)
-		node := tm.ScheduleFunc(time.Millisecond, func() {
+
+		_ = tm.ScheduleFunc(2*time.Millisecond, func() {
+			log.Printf("%v\n", time.Now())
 			atomic.AddInt32(&count, 1)
 			if atomic.LoadInt32(&count) == 2 {
-				c <- true
+				tm.Stop()
 			}
 		})
-
-		go func() {
-			<-c
-			node.Stop()
-			node.Stop()
-		}()
 
 		time.Sleep(time.Millisecond * 5)
 		if atomic.LoadInt32(&count) != 2 {
@@ -323,7 +319,7 @@ func Test_RunCount(t *testing.T) {
 		time.Sleep(time.Millisecond * 15)
 		tm.Stop()
 		if count != uint32(max) {
-			t.Errorf("count != %d", max)
+			t.Errorf("count:%d != %d", count, max)
 		}
 
 	})
