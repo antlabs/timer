@@ -1,3 +1,7 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
+
 package timer
 
 import (
@@ -6,6 +10,11 @@ import (
 	"time"
 )
 
+func Test_NodeSizeof(t *testing.T) {
+	t.Run("输出最小堆node的sizeof", func(t *testing.T) {
+		// t.Logf("minHeapNode size: %d， %d\n", unsafe.Sizeof(minHeapNode{}), unsafe.Sizeof(time.Timer{}))
+	})
+}
 func Test_MinHeap(t *testing.T) {
 	t.Run("", func(t *testing.T) {
 		var mh minHeaps

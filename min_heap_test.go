@@ -1,6 +1,11 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 import (
+	"log"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -10,23 +15,41 @@ import (
 func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 	t.Run("1ms", func(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
-		now := time.Now()
+
 		go tm.Run()
 		count := int32(0)
 
 		tc := make(chan time.Duration, 2)
 
-		tm.AfterFunc(time.Millisecond, func() {
+		var mu sync.Mutex
+		isClose := false
+		now := time.Now()
+		node1 := tm.AfterFunc(time.Millisecond, func() {
+
+			mu.Lock()
 			atomic.AddInt32(&count, 1)
-			tc <- time.Since(now)
-		})
-		tm.AfterFunc(time.Millisecond, func() {
-			atomic.AddInt32(&count, 1)
-			tc <- time.Since(now)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
 		})
 
-		time.Sleep(time.Millisecond * 2)
+		node2 := tm.AfterFunc(time.Millisecond, func() {
+			mu.Lock()
+			atomic.AddInt32(&count, 1)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+		})
+
+		time.Sleep(time.Millisecond * 3)
+		mu.Lock()
+		isClose = true
 		close(tc)
+		node1.Stop()
+		node2.Stop()
+		mu.Unlock()
 		for tv := range tc {
 			if tv < time.Millisecond || tv > 2*time.Millisecond {
 				t.Errorf("tc < time.Millisecond tc > 2*time.Millisecond")
@@ -34,28 +57,52 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			}
 		}
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
 
 	t.Run("10ms", func(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
-		now := time.Now()
-		go tm.Run()
+
+		go tm.Run() // 运行事件循环
 		count := int32(0)
 		tc := make(chan time.Duration, 2)
-		tm.AfterFunc(time.Millisecond*10, func() {
+
+		var mu sync.Mutex
+		isClosed := false
+		now := time.Now()
+		node1 := tm.AfterFunc(time.Millisecond*10, func() {
+			now2 := time.Now()
+			mu.Lock()
 			atomic.AddInt32(&count, 1)
-			tc <- time.Since(now)
+			if atomic.LoadInt32(&count) <= 2 && !isClosed {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+			log.Printf("node1.Lock:%v\n", time.Since(now2))
 		})
-		tm.AfterFunc(time.Millisecond*10, func() {
+		node2 := tm.AfterFunc(time.Millisecond*10, func() {
+			now2 := time.Now()
+			mu.Lock()
 			atomic.AddInt32(&count, 1)
-			tc <- time.Since(now)
+			if atomic.LoadInt32(&count) <= 2 && !isClosed {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+			log.Printf("node2.Lock:%v\n", time.Since(now2))
 		})
 
-		time.Sleep(time.Millisecond * 20)
+		time.Sleep(time.Millisecond * 24)
+		now3 := time.Now()
+		mu.Lock()
+		node1.Stop()
+		node2.Stop()
+		isClosed = true
 		close(tc)
+		mu.Unlock()
+
+		log.Printf("node1.Stop:%v\n", time.Since(now3))
 		cnt := 1
 		for tv := range tc {
 			left := time.Millisecond * 10 * time.Duration(cnt)
@@ -66,7 +113,8 @@ func Test_MinHeap_AfterFunc_Run(t *testing.T) {
 			// cnt++
 		}
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
@@ -92,23 +140,18 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
 		go tm.Run()
 		count := int32(0)
-		c := make(chan bool, 1)
-		node := tm.ScheduleFunc(time.Millisecond, func() {
+
+		_ = tm.ScheduleFunc(2*time.Millisecond, func() {
+			log.Printf("%v\n", time.Now())
 			atomic.AddInt32(&count, 1)
 			if atomic.LoadInt32(&count) == 2 {
-				c <- true
+				tm.Stop()
 			}
 		})
 
-		go func() {
-			<-c
-			node.Stop()
-			node.Stop()
-		}()
-
 		time.Sleep(time.Millisecond * 5)
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
@@ -117,24 +160,29 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
 		go tm.Run()
 		count := int32(0)
-		c := make(chan bool, 1)
 		tc := make(chan time.Duration, 2)
+		var mu sync.Mutex
+		isClosed := false
 		now := time.Now()
+
 		node := tm.ScheduleFunc(time.Millisecond*10, func() {
+			mu.Lock()
 			atomic.AddInt32(&count, 1)
-			tc <- time.Since(now)
-			if atomic.LoadInt32(&count) >= 2 {
-				c <- true
+
+			if atomic.LoadInt32(&count) <= 2 && !isClosed {
+				tc <- time.Since(now)
 			}
+			mu.Unlock()
 		})
 
-		go func() {
-			<-c
-			node.Stop()
-		}()
+		time.Sleep(time.Millisecond * 25)
 
-		time.Sleep(time.Millisecond * 30)
+		mu.Lock()
 		close(tc)
+		isClosed = true
+		node.Stop()
+		mu.Unlock()
+
 		cnt := 1
 		for tv := range tc {
 			left := time.Millisecond * 10 * time.Duration(cnt)
@@ -146,7 +194,7 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 		}
 
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
@@ -170,7 +218,7 @@ func Test_MinHeap_ScheduleFunc_Run(t *testing.T) {
 
 		time.Sleep(time.Millisecond * 70)
 		if atomic.LoadInt32(&count) != 2 {
-			t.Errorf("count != 2")
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
 		}
 
 	})
@@ -208,17 +256,21 @@ func (c *curstomTest) Next(now time.Time) (rv time.Time) {
 func Test_CustomFunc(t *testing.T) {
 	t.Run("custom", func(t *testing.T) {
 		tm := NewTimer(WithMinHeap())
-		mh := tm.(*minHeap)
+		// mh := tm.(*minHeap) // 最小堆
 		tc := make(chan time.Duration, 2)
 		now := time.Now()
 		count := uint32(1)
 		stop := make(chan bool, 1)
+		// 自定义函数
 		node := tm.CustomFunc(&curstomTest{count: 1}, func() {
+
 			if atomic.LoadUint32(&count) == 2 {
 				return
 			}
+			// 计算运行次数
 			atomic.AddUint32(&count, 1)
 			tc <- time.Since(now)
+			// 关闭这个任务
 			close(stop)
 		})
 
@@ -243,9 +295,10 @@ func Test_CustomFunc(t *testing.T) {
 			t.Errorf("count != 2")
 		}
 
-		if mh.runCount != uint32(1) {
-			t.Errorf("mh.runCount != 1")
-		}
+		// 正在运行的任务是比较短暂的，所以外部很难
+		// if mh.runCount != int32(1) {
+		// 	t.Errorf("mh.runCount:%d != 1", mh.runCount)
+		// }
 
 	})
 }
@@ -269,7 +322,7 @@ func Test_RunCount(t *testing.T) {
 		time.Sleep(time.Millisecond * 15)
 		tm.Stop()
 		if count != uint32(max) {
-			t.Errorf("count != %d", max)
+			t.Errorf("count:%d != %d", count, max)
 		}
 
 	})

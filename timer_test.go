@@ -1,7 +1,11 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 import (
 	"log"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -34,7 +38,7 @@ func Test_ScheduleFunc(t *testing.T) {
 
 func Test_AfterFunc(t *testing.T) {
 	tm := NewTimer()
-
+	go tm.Run()
 	log.Printf("start\n")
 
 	count := uint32(0)
@@ -60,11 +64,9 @@ func Test_AfterFunc(t *testing.T) {
 		tm.AfterFunc(time.Hour*24*365*12, nil)
 	*/
 
-	go func() {
-		time.Sleep(time.Second + time.Millisecond*100)
-		tm.Stop()
-	}()
-	tm.Run()
+	time.Sleep(time.Second + time.Millisecond*100)
+	tm.Stop()
+
 	if count != 2 {
 		t.Errorf("count:%d != 2\n", count)
 	}
@@ -106,4 +108,112 @@ func Test_Node_Stop(t *testing.T) {
 		t.Errorf("count:%d == 1\n", count)
 	}
 
+}
+
+// 测试重置定时器
+func Test_Reset(t *testing.T) {
+	t.Run("min heap reset", func(t *testing.T) {
+
+		tm := NewTimer(WithMinHeap())
+
+		go tm.Run()
+		count := int32(0)
+
+		tc := make(chan time.Duration, 2)
+
+		var mu sync.Mutex
+		isClose := false
+		now := time.Now()
+		node1 := tm.AfterFunc(time.Millisecond*100, func() {
+
+			mu.Lock()
+			atomic.AddInt32(&count, 1)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+		})
+
+		node2 := tm.AfterFunc(time.Millisecond*100, func() {
+			mu.Lock()
+			atomic.AddInt32(&count, 1)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+		})
+		node1.Reset(time.Millisecond)
+		node2.Reset(time.Millisecond)
+
+		time.Sleep(time.Millisecond * 3)
+		mu.Lock()
+		isClose = true
+		close(tc)
+		node1.Stop()
+		node2.Stop()
+		mu.Unlock()
+		for tv := range tc {
+			if tv < time.Millisecond || tv > 2*time.Millisecond {
+				t.Errorf("tc < time.Millisecond tc > 2*time.Millisecond")
+
+			}
+		}
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
+		}
+
+	})
+
+	t.Run("time wheel reset", func(t *testing.T) {
+		tm := NewTimer()
+
+		go func() {
+			tm.Run()
+		}()
+
+		count := int32(0)
+
+		tc := make(chan time.Duration, 2)
+
+		var mu sync.Mutex
+		isClose := false
+		now := time.Now()
+		node1 := tm.AfterFunc(time.Millisecond*10, func() {
+
+			mu.Lock()
+			atomic.AddInt32(&count, 1)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+		})
+
+		node2 := tm.AfterFunc(time.Millisecond*10, func() {
+			mu.Lock()
+			atomic.AddInt32(&count, 1)
+			if atomic.LoadInt32(&count) <= 2 && !isClose {
+				tc <- time.Since(now)
+			}
+			mu.Unlock()
+		})
+
+		node1.Reset(time.Millisecond * 20)
+		node2.Reset(time.Millisecond * 20)
+
+		time.Sleep(time.Millisecond * 40)
+		mu.Lock()
+		isClose = true
+		close(tc)
+		node1.Stop()
+		node2.Stop()
+		mu.Unlock()
+		for tv := range tc {
+			if tv < time.Millisecond*20 || tv > 2*time.Millisecond*20 {
+				t.Errorf("tc < time.Millisecond tc > 2*time.Millisecond")
+			}
+		}
+		if atomic.LoadInt32(&count) != 2 {
+			t.Errorf("count:%d != 2", atomic.LoadInt32(&count))
+		}
+	})
 }

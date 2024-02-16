@@ -1,3 +1,6 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 import (
@@ -59,7 +62,7 @@ type timeNode struct {
 	list       unsafe.Pointer //存放表头信息
 	version    uint64         //保存节点版本信息
 	isSchedule bool
-
+	root       *timeWheel
 	list.Head
 }
 
@@ -67,8 +70,10 @@ type timeNode struct {
 // 1.存在于初始化链表中
 // 2.被移动到tmp链表
 // 3.1 和 3.2是if else的状态
-// 	3.1被移动到new链表
-// 	3.2直接执行
+//
+//	3.1被移动到new链表
+//	3.2直接执行
+//
 // 1和3.1状态是没有问题的
 // 2和3.2状态会是没有锁保护下的操作,会有数据竞争
 func (t *timeNode) Stop() {
@@ -86,4 +91,22 @@ func (t *timeNode) Stop() {
 	}
 
 	cpyList.Del(&t.Head)
+}
+
+// warning: 该函数目前没有稳定
+func (t *timeNode) Reset(expire time.Duration) {
+	cpyList := (*Time)(atomic.LoadPointer(&t.list))
+	cpyList.Lock()
+	defer cpyList.Unlock()
+	// TODO: 这里有一个问题，如果在执行Reset的时候，这个节点已经被移动到tmp链表
+	// if atomic.LoadUint64(&t.version) != atomic.LoadUint64(&cpyList.version) {
+	// 	return
+	// }
+	cpyList.Del(&t.Head)
+	jiffies := atomic.LoadUint64(&t.root.jiffies)
+
+	expire = expire/(time.Millisecond*10) + time.Duration(jiffies)
+	t.expire = uint64(expire)
+
+	t.root.add(t, jiffies)
 }
