@@ -29,9 +29,9 @@ type Timer interface {
 
 // 停止单个定时器
 type TimeNoder interface {
-	Stop()
+	Stop() bool
 	// 重置时间器
-	Reset(expire time.Duration)
+	Reset(expire time.Duration) bool
 }
 
 // 定时器构造函数

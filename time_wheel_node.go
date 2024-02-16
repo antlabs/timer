@@ -76,7 +76,7 @@ type timeNode struct {
 //
 // 1和3.1状态是没有问题的
 // 2和3.2状态会是没有锁保护下的操作,会有数据竞争
-func (t *timeNode) Stop() {
+func (t *timeNode) Stop() bool {
 
 	atomic.StoreUint32(&t.stop, haveStop)
 
@@ -87,14 +87,15 @@ func (t *timeNode) Stop() {
 	cpyList.Lock()
 	defer cpyList.Unlock()
 	if atomic.LoadUint64(&t.version) != atomic.LoadUint64(&cpyList.version) {
-		return
+		return false
 	}
 
 	cpyList.Del(&t.Head)
+	return true
 }
 
 // warning: 该函数目前没有稳定
-func (t *timeNode) Reset(expire time.Duration) {
+func (t *timeNode) Reset(expire time.Duration) bool {
 	cpyList := (*Time)(atomic.LoadPointer(&t.list))
 	cpyList.Lock()
 	defer cpyList.Unlock()
@@ -109,4 +110,5 @@ func (t *timeNode) Reset(expire time.Duration) {
 	t.expire = uint64(expire)
 
 	t.root.add(t, jiffies)
+	return true
 }
