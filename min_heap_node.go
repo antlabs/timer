@@ -17,11 +17,13 @@ type minHeapNode struct {
 	isSchedule bool          // 是否是周期性任务
 }
 
-func (m *minHeapNode) Stop() {
+func (m *minHeapNode) Stop() bool {
 	m.root.removeTimeNode(m)
+	return true
 }
-func (m *minHeapNode) Reset(d time.Duration) {
+func (m *minHeapNode) Reset(d time.Duration) bool {
 	m.root.resetTimeNode(m, d)
+	return true
 }
 
 func (m *minHeapNode) Next(now time.Time) time.Time {
