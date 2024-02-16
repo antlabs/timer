@@ -1,3 +1,6 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 type option struct {
@@ -21,14 +24,14 @@ func WithMinHeap() Option {
 	}
 }
 
-//TODO
+// TODO
 func WithSkipList() Option {
 	return func(o *option) {
 		o.skiplist = true
 	}
 }
 
-//TODO
+// TODO
 func WithRbtree() Option {
 	return func(o *option) {
 		o.rbtree = true

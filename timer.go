@@ -1,3 +1,6 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 import "time"
@@ -27,7 +30,8 @@ type Timer interface {
 // 停止单个定时器
 type TimeNoder interface {
 	Stop()
-	Reset(d time.Duration)
+	// 重置时间器
+	Reset(expire time.Duration)
 }
 
 // 定时器构造函数

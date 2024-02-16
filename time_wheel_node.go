@@ -1,3 +1,6 @@
+// Copyright 2020-2024 guonaihong, antlabs. All rights reserved.
+//
+// mit license
 package timer
 
 import (
@@ -105,5 +108,5 @@ func (t *timeNode) Reset(expire time.Duration) {
 	expire = expire/(time.Millisecond*10) + time.Duration(jiffies)
 	t.expire = uint64(expire)
 
-	t.root.add(t, atomic.LoadUint64(&t.root.jiffies))
+	t.root.add(t, jiffies)
 }
