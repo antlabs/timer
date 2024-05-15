@@ -104,7 +104,7 @@ func (m *minHeap) getNewSleepTime() time.Duration {
 		return time.Hour
 	}
 
-	timeout := m.minHeaps[0].absExpire.Sub(time.Now())
+	timeout := time.Until(m.minHeaps[0].absExpire)
 	if timeout < 0 {
 		timeout = 0
 	}
