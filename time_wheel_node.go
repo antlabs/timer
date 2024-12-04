@@ -27,12 +27,12 @@ type Time struct {
 	// level 在near盘子里就是1, 在T2ToTt[0]盘子里就是2起步
 	// index 就是各自盘子的索引值
 	// seq   自增id
-	version uint64
+	version atomic.Uint64
 }
 
 func newTimeHead(level uint64, index uint64) *Time {
 	head := &Time{}
-	head.version = genVersionHeight(level, index)
+	head.version.Store(genVersionHeight(level, index))
 	head.Init()
 	return head
 }
@@ -44,23 +44,23 @@ func genVersionHeight(level uint64, index uint64) uint64 {
 func (t *Time) lockPushBack(node *timeNode, level uint64, index uint64) {
 	t.Lock()
 	defer t.Unlock()
-	if atomic.LoadUint32(&node.stop) == haveStop {
+	if node.stop.Load() == haveStop {
 		return
 	}
 
 	t.AddTail(&node.Head)
 	atomic.StorePointer(&node.list, unsafe.Pointer(t))
 	//更新节点的version信息
-	atomic.StoreUint64(&node.version, atomic.LoadUint64(&t.version))
+	node.version.Store(t.version.Load())
 }
 
 type timeNode struct {
 	expire     uint64
 	userExpire time.Duration
 	callback   func()
-	stop       uint32
+	stop       atomic.Uint32
 	list       unsafe.Pointer //存放表头信息
-	version    uint64         //保存节点版本信息
+	version    atomic.Uint64  //保存节点版本信息
 	isSchedule bool
 	root       *timeWheel
 	list.Head
@@ -78,7 +78,7 @@ type timeNode struct {
 // 2和3.2状态会是没有锁保护下的操作,会有数据竞争
 func (t *timeNode) Stop() bool {
 
-	atomic.StoreUint32(&t.stop, haveStop)
+	t.stop.Store(haveStop)
 
 	// 使用版本号算法让timeNode知道自己是否被移动了
 	// timeNode的version和表头的version一样表示没有被移动可以直接删除
@@ -86,7 +86,7 @@ func (t *timeNode) Stop() bool {
 	cpyList := (*Time)(atomic.LoadPointer(&t.list))
 	cpyList.Lock()
 	defer cpyList.Unlock()
-	if atomic.LoadUint64(&t.version) != atomic.LoadUint64(&cpyList.version) {
+	if t.version.Load() != cpyList.version.Load() {
 		return false
 	}
 
