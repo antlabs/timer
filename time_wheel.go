@@ -176,7 +176,7 @@ func (t *timeWheel) cascade(levelIndex int, index int) {
 	l.ReplaceInit(&tmp.Head)
 
 	// 每次链表的元素被移动走，都修改version
-	atomic.AddUint64(&l.version, 1)
+	l.version.Add(1)
 	l.Unlock()
 
 	offset := unsafe.Offsetof(tmp.Head)
@@ -220,7 +220,7 @@ func (t *timeWheel) moveAndExec() {
 	head := newTimeHead(0, 0)
 	t1 := t.t1[index]
 	t1.ReplaceInit(&head.Head)
-	atomic.AddUint64(&t1.version, 1)
+	t1.version.Add(1)
 	t.t1[index].Unlock()
 
 	// 执行,链表中的定时器
@@ -230,7 +230,7 @@ func (t *timeWheel) moveAndExec() {
 		val := (*timeNode)(pos.Entry(offset))
 		head.Del(pos)
 
-		if atomic.LoadUint32(&val.stop) == haveStop {
+		if val.stop.Load() == haveStop {
 			return
 		}
 
